@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, Fragment, useRef } from 'react';
 import { 
   Compass, 
   Sparkles, 
@@ -15,7 +14,9 @@ import {
   Plus,
   MessageCircle,
   LayoutGrid,
-  Download
+  Download,
+  Orbit,
+  Play
 } from 'lucide-react';
 import { Post, User, FeedType, Notification, Reel, Story } from './types';
 import PostCard from './components/PostCard';
@@ -32,7 +33,7 @@ const MOCK_USER: User = {
   id: 'u1',
   username: 'innovator_alex',
   avatar: 'https://picsum.photos/seed/alex/150/150',
-  meritScore: 450,
+  meritScore: 1240,
   followersCount: 128
 };
 
@@ -76,11 +77,48 @@ const INITIAL_REELS: Reel[] = [
       meritScore: 890
     },
     content: "Neural architecture exploration. The buttery smoothness of data flow.",
-    videoUrl: "https://v1.pexels.com/video-files/5199624/5199624-uhd_2560_1440_25fps.mp4",
+    videoUrl: "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+    thumbnailUrl: "https://picsum.photos/seed/r1/300/500",
     timestamp: new Date(),
     upvotes: 1200,
     downvotes: 45,
     views: 15400,
+    comments: []
+  },
+  {
+    id: 'r2',
+    isReel: true,
+    author: {
+      id: 'u10',
+      username: 'zen_architect',
+      avatar: 'https://picsum.photos/seed/zen/100/100',
+      meritScore: 1500
+    },
+    content: "Designing for the void. Minimalist spaces in digital realms.",
+    videoUrl: "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
+    thumbnailUrl: "https://picsum.photos/seed/r2/300/500",
+    timestamp: new Date(),
+    upvotes: 3400,
+    downvotes: 12,
+    views: 42000,
+    comments: []
+  },
+  {
+    id: 'r3',
+    isReel: true,
+    author: {
+      id: 'u11',
+      username: 'neuro_traveler',
+      avatar: 'https://picsum.photos/seed/neuro/100/100',
+      meritScore: 800
+    },
+    content: "Travel through the optic nerve.",
+    videoUrl: "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4",
+    thumbnailUrl: "https://picsum.photos/seed/r3/300/500",
+    timestamp: new Date(),
+    upvotes: 850,
+    downvotes: 2,
+    views: 5200,
     comments: []
   }
 ];
@@ -94,18 +132,18 @@ const INITIAL_POSTS: Post[] = [
       avatar: 'https://picsum.photos/seed/thinker/150/150',
       meritScore: 1240
     },
-    content: "True value in social media comes from the quality of the signal, not the volume of the noise. Let the best ideas thrive on merit alone.",
+    content: "True value in social media comes from the quality of the signal, not the volume of the noise. Let the best ideas thrive on merit alone. High signal content should propagate effortlessly.",
     timestamp: new Date(Date.now() - 3600000),
     upvotes: 452,
     downvotes: 12,
     views: 2840,
     aiBadge: {
-      label: "High Signal",
+      label: "Signal Peak",
       color: "cyan",
-      description: "Exceptional conceptual depth."
+      description: "Exceptional depth and clarity detected."
     },
     comments: [],
-    imageUrl: "https://picsum.photos/seed/prism/800/600"
+    imageUrl: "https://picsum.photos/seed/prism/1000/1000"
   },
   {
     id: 'p2',
@@ -115,12 +153,12 @@ const INITIAL_POSTS: Post[] = [
       avatar: 'https://picsum.photos/seed/lab/150/150',
       meritScore: 680
     },
-    content: "Design is not just what it looks like; it's how it moves. Fluidity is the soul of interaction.",
+    content: "Design is not just what it looks like; it's how it moves. Fluidity is the soul of interaction in the modern meritocracy.",
     timestamp: new Date(Date.now() - 7200000),
     upvotes: 215,
     downvotes: 3,
     views: 1120,
-    imageUrl: "https://picsum.photos/seed/design/800/600",
+    imageUrl: "https://picsum.photos/seed/design/1000/1000",
     comments: []
   }
 ];
@@ -135,6 +173,65 @@ const INITIAL_NOTIFICATIONS: Notification[] = [
     status: 'PENDING'
   }
 ];
+
+const SignalSeparator: React.FC<{ className?: string }> = ({ className = "" }) => (
+  <div className={`relative flex items-center justify-center w-full py-1.5 ${className}`}>
+    <div className="h-px flex-1 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+    <div className="mx-4 w-0.5 h-0.5 rounded-full bg-indigo-500/30 blur-[0.5px] animate-pulse" />
+    <div className="h-px flex-1 bg-gradient-to-l from-transparent via-white/10 to-transparent" />
+  </div>
+);
+
+const ReelRibbon: React.FC<{ reels: Reel[], onReelClick: (reel: Reel) => void }> = ({ reels, onReelClick }) => {
+  return (
+    <div className="w-full py-1">
+      <div className="flex items-center justify-between px-2 mb-2">
+         <span className="text-[9px] font-black uppercase tracking-[0.3em] text-app-muted">Following Signals</span>
+         <span className="text-[8px] font-bold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-md uppercase tracking-widest">Live Reels</span>
+      </div>
+      <div className="flex items-center space-x-3 overflow-x-auto no-scrollbar scroll-smooth px-1">
+        {reels.map((reel) => (
+          <div 
+            key={reel.id} 
+            onClick={() => onReelClick(reel)}
+            className="flex-shrink-0 w-32 h-56 rounded-2xl glass border border-white/10 relative overflow-hidden group cursor-pointer active:scale-95 transition-all"
+          >
+            <video 
+              src={reel.videoUrl} 
+              poster={reel.thumbnailUrl}
+              className="absolute inset-0 w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-110 transition-all duration-700" 
+              muted 
+              loop 
+              playsInline 
+              preload="metadata"
+              onMouseEnter={(e) => {
+                const playPromise = e.currentTarget.play();
+                if (playPromise !== undefined) {
+                  playPromise.catch(() => {});
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.pause();
+                e.currentTarget.currentTime = 0;
+              }}
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none" />
+            <div className="absolute bottom-3 left-3 right-3 flex flex-col">
+              <div className="flex items-center space-x-1.5 mb-1">
+                <img src={reel.author.avatar} className="w-5 h-5 rounded-lg border border-white/20" />
+                <span className="text-[9px] font-black text-white/90 truncate">@{reel.author.username}</span>
+              </div>
+              <div className="flex items-center space-x-1">
+                <Play size={8} fill="currentColor" className="text-white" />
+                <span className="text-[8px] font-bold text-white/60">{(reel.views / 1000).toFixed(1)}k</span>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
 
 const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User>(MOCK_USER);
@@ -160,18 +257,16 @@ const App: React.FC = () => {
 
   const changeFeed = useCallback((feed: FeedType) => {
     if (activeFeed === feed && feed !== FeedType.PROFILE) return;
-    if (feed === FeedType.PROFILE && activeFeed === FeedType.PROFILE && viewedUser.id === currentUser.id) return;
-    
-    setIsSyncing(feed !== activeFeed);
+    setIsSyncing(true);
     setActiveFeed(feed);
-    setTimeout(() => setIsSyncing(false), 700);
-  }, [activeFeed, viewedUser, currentUser.id]);
+    setTimeout(() => setIsSyncing(false), 500);
+  }, [activeFeed]);
 
   const handleNavigateToProfile = useCallback((user: User) => {
     setViewedUser(user);
     setIsSyncing(true);
     setActiveFeed(FeedType.PROFILE);
-    setTimeout(() => setIsSyncing(false), 700);
+    setTimeout(() => setIsSyncing(false), 500);
   }, []);
 
   const handleGoToMyProfile = useCallback(() => {
@@ -181,10 +276,7 @@ const App: React.FC = () => {
 
   const handleIdentityUpdate = (updatedUser: User) => {
     setCurrentUser(updatedUser);
-    // If we are looking at our own profile, update the view
-    if (viewedUser.id === updatedUser.id) {
-      setViewedUser(updatedUser);
-    }
+    if (viewedUser.id === updatedUser.id) setViewedUser(updatedUser);
   };
 
   const handlePostCreated = useCallback((newPost: Post) => {
@@ -199,33 +291,26 @@ const App: React.FC = () => {
 
   const handleUpvote = (id: string) => {
     setPosts(prev => prev.map(p => p.id === id ? { ...p, upvotes: p.upvotes + 1 } : p));
-    setReels(prev => prev.map(p => p.id === id ? { ...p, upvotes: p.upvotes + 1 } : p));
   };
   const handleDownvote = (id: string) => {
     setPosts(prev => prev.map(p => p.id === id ? { ...p, downvotes: p.downvotes + 1 } : p));
-    setReels(prev => prev.map(p => p.id === id ? { ...p, downvotes: p.downvotes + 1 } : p));
   };
 
   const unreadCount = useMemo(() => notifications.filter(n => !n.read).length, [notifications]);
 
-  const sortedPosts = useMemo(() => {
-    const p = [...posts];
-    return p.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
-  }, [posts]);
-
   const renderContent = () => {
     if (isSyncing) {
         return (
-            <div className="flex flex-col items-center justify-center h-[50vh] animate-pulse">
-                <div className="w-16 h-16 rounded-3xl merit-gradient animate-spin-slow blur-sm opacity-50"></div>
-                <p className="mt-8 text-[10px] font-black uppercase tracking-[0.5em] text-app-muted">Recalibrating...</p>
+            <div className="flex flex-col items-center justify-center h-[60vh] animate-spring">
+                <div className="w-20 h-20 rounded-[2.5rem] merit-gradient animate-spin shadow-[0_0_50px_rgba(255,0,128,0.3)]"></div>
+                <p className="mt-10 text-[11px] font-black uppercase tracking-[0.6em] text-app-muted animate-pulse">Synchronizing</p>
             </div>
         );
     }
 
     switch (activeFeed) {
       case FeedType.REELS:
-        return <div className="animate-fluid-in"><ReelFeed reels={reels} onUpvote={handleUpvote} onDownvote={handleDownvote} onNavigateToProfile={handleNavigateToProfile} /></div>;
+        return <div className="animate-spring"><ReelFeed reels={reels} onUpvote={handleUpvote} onDownvote={handleDownvote} onNavigateToProfile={handleNavigateToProfile} /></div>;
       case FeedType.PROFILE:
         return (
           <ProfileView 
@@ -235,21 +320,26 @@ const App: React.FC = () => {
             onUpvote={handleUpvote} 
             onDownvote={handleDownvote} 
             onOpenIdentityEdit={() => setIsIdentityModalOpen(true)}
+            onNavigateToProfile={handleNavigateToProfile}
           />
         );
       case FeedType.MESSAGES:
         return <ChatView currentUser={currentUser} onNavigateToProfile={handleNavigateToProfile} />;
       default:
         return (
-          <div className="space-y-8 sm:space-y-12 pb-32">
-            {sortedPosts.map((post, index) => (
-              <div 
-                key={post.id} 
-                className={`relative animate-fluid-in`}
-                style={{ animationDelay: `${0.1 * (index + 1)}s` }}
-              >
-                <PostCard post={post} onUpvote={handleUpvote} onDownvote={handleDownvote} currentUser={currentUser} onNavigateToProfile={handleNavigateToProfile} />
-              </div>
+          <div className="space-y-3 pb-40">
+            {posts.map((post, index) => (
+              <Fragment key={post.id}>
+                <div 
+                  className="animate-spring"
+                  style={{ animationDelay: `${0.1 * index}s` }}
+                >
+                  <PostCard post={post} onUpvote={handleUpvote} onDownvote={handleDownvote} currentUser={currentUser} onNavigateToProfile={handleNavigateToProfile} />
+                </div>
+                {index < posts.length - 1 && (
+                  <SignalSeparator className="opacity-30" />
+                )}
+              </Fragment>
             ))}
           </div>
         );
@@ -258,75 +348,62 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen pb-32 lg:pb-0 relative text-app-text">
-      {/* Navigation Bar */}
-      <nav className="glass sticky top-0 z-50 border-b border-white/5 shadow-2xl">
-        <div className="max-w-6xl mx-auto px-6 h-16 sm:h-20 flex items-center justify-between">
-          <div className="flex items-center space-x-6">
-            <div className="flex items-center space-x-4 group cursor-pointer" onClick={() => changeFeed(FeedType.DISCOVERY)}>
-              <div className="w-10 h-10 sm:w-11 sm:h-11 merit-gradient rounded-2xl flex items-center justify-center text-white shadow-xl group-hover:rotate-12 transition-all duration-700">
-                <Sparkles size={20} className="sm:size-24" />
-              </div>
-              <div className="hidden sm:block">
-                <h1 className="text-xl sm:text-2xl font-black tracking-tighter leading-none">Stud</h1>
-                <span className="text-[9px] text-app-muted font-bold uppercase tracking-[0.2em]">Prism Network</span>
+      <div className="fixed top-8 right-6 z-[95] flex items-center space-x-3 lg:hidden">
+        <button 
+          onClick={toggleTheme}
+          className="p-3 rounded-2xl glass text-app-muted hover:text-white transition-all active:scale-90 shadow-2xl"
+        >
+          {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+        </button>
+        <button 
+          onClick={() => setIsNotificationsOpen(true)}
+          className="p-3 rounded-2xl glass text-app-muted hover:text-white transition-all active:scale-90 shadow-2xl relative"
+        >
+          <Bell size={18} />
+          {unreadCount > 0 && (
+            <span className="absolute top-0 right-0 w-4 h-4 merit-gradient rounded-full border-2 border-app-bg flex items-center justify-center text-[8px] font-black text-white">
+              {unreadCount}
+            </span>
+          )}
+        </button>
+        <button 
+          onClick={handleGoToMyProfile}
+          className={`p-0.5 rounded-2xl transition-all shadow-2xl ${activeFeed === FeedType.PROFILE && viewedUser.id === currentUser.id ? 'ring-2 ring-indigo-500' : 'opacity-80'}`}
+        >
+          <img src={currentUser.avatar} className="w-10 h-10 rounded-2xl object-cover border border-white/10" />
+        </button>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 pt-12 lg:pt-20">
+        <aside className="hidden lg:block lg:col-span-3 sticky top-20 h-fit space-y-8">
+            <div className="px-6 mb-12">
+              <div className="flex items-center space-x-5 group cursor-pointer" onClick={() => changeFeed(FeedType.DISCOVERY)}>
+                <div className="w-14 h-14 merit-gradient rounded-[1.6rem] flex items-center justify-center text-white shadow-2xl group-hover:rotate-[15deg] transition-all duration-700 active:scale-90">
+                  <Sparkles size={28} />
+                </div>
+                <div>
+                  <h1 className="text-3xl font-black tracking-tighter leading-none">Stud</h1>
+                  <p className="text-[10px] text-app-accent font-bold uppercase tracking-[0.4em] mt-1">Merit Node</p>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="flex items-center space-x-3">
-            <button 
-              onClick={toggleTheme}
-              className="p-2.5 sm:p-3 rounded-2xl bg-white/5 text-app-muted hover:text-white transition-all active:scale-90"
-            >
-              {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-            </button>
-
-            <div className="flex items-center space-x-2 sm:space-x-3 pl-3 border-l border-white/5">
-              <button onClick={() => setIsNotificationsOpen(true)} className="relative p-2.5 sm:p-3 text-app-muted hover:text-white transition-all group active:scale-90">
-                <Bell size={22} />
-                {unreadCount > 0 && <span className="absolute top-2 right-2 w-4 h-4 merit-gradient rounded-full border-2 border-app-bg flex items-center justify-center text-[8px] font-black text-white shadow-lg">{unreadCount}</span>}
-              </button>
-              
-              <button 
-                onClick={handleGoToMyProfile}
-                className={`p-0.5 rounded-2xl transition-all active:scale-90 ${activeFeed === FeedType.PROFILE && viewedUser.id === currentUser.id ? 'ring-4 ring-indigo-500/30' : 'grayscale hover:grayscale-0'}`}
-              >
-                <img src={currentUser.avatar} className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl object-cover border border-white/10 shadow-lg" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </nav>
-
-      {activeFeed === FeedType.DISCOVERY && !isSyncing && (
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-4 sm:pt-6">
-          <StoryBar 
-            stories={stories} 
-            currentUser={currentUser} 
-            onAddStory={() => setIsCreateModalOpen(true)} 
-            onViewStory={(s) => setStories(prev => prev.map(item => item.id === s.id ? { ...item, isSeen: true } : item))}
-            onNavigateToProfile={handleNavigateToProfile}
-          />
-        </div>
-      )}
-
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 sm:py-6 grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-12">
-        <aside className="hidden lg:block lg:col-span-3 sticky top-32 h-fit space-y-8">
-            <div className="glass rounded-[2.5rem] p-8 space-y-4 shadow-xl">
-              <h3 className="text-[10px] font-black text-app-muted uppercase tracking-[0.4em] px-4 mb-4">Signal Hub</h3>
+            <div className="glass rounded-[3rem] p-8 space-y-4 shadow-2xl">
+              <h3 className="text-[10px] font-black text-app-muted uppercase tracking-[0.4em] px-6 mb-6">Navigation</h3>
               {[
-                { type: FeedType.DISCOVERY, icon: Compass, label: 'Feed' },
+                { type: FeedType.DISCOVERY, icon: Compass, label: 'Discover' },
                 { type: FeedType.REELS, icon: Clapperboard, label: 'Visuals' },
                 { type: FeedType.MESSAGES, icon: MessageCircle, label: 'Signals' },
+                { type: FeedType.PROFILE, icon: Orbit, label: 'Network', action: handleGoToMyProfile },
               ].map((item) => (
                 <button 
                   key={item.label}
-                  onClick={() => changeFeed(item.type)}
-                  className={`w-full flex items-center justify-between px-6 py-4 rounded-2xl transition-all group ${activeFeed === item.type ? `merit-gradient text-white shadow-xl` : 'text-app-muted hover:bg-white/5 hover:text-app-text'}`}
+                  onClick={() => item.action ? item.action() : changeFeed(item.type)}
+                  className={`w-full flex items-center justify-between px-6 py-4 rounded-2xl transition-all group ${activeFeed === item.type && (item.type !== FeedType.PROFILE || viewedUser.id === currentUser.id) ? `merit-gradient text-white shadow-[0_10px_30px_rgba(255,0,128,0.2)]` : 'text-app-muted hover:bg-white/[0.03] hover:text-app-text'}`}
                 >
-                  <div className="flex items-center space-x-4">
-                    <item.icon size={20} className={activeFeed === item.type ? 'text-white' : 'text-indigo-500/60'} />
-                    <span className="font-black text-[11px] uppercase tracking-[0.1em]">{item.label}</span>
+                  <div className="flex items-center space-x-5">
+                    <item.icon size={22} className={activeFeed === item.type && (item.type !== FeedType.PROFILE || viewedUser.id === currentUser.id) ? 'text-white' : 'text-indigo-400/50 group-hover:text-indigo-400 transition-colors'} />
+                    <span className="font-black text-[12px] uppercase tracking-widest">{item.label}</span>
                   </div>
                 </button>
               ))}
@@ -334,46 +411,82 @@ const App: React.FC = () => {
         </aside>
 
         <main className={`col-span-1 ${activeFeed === FeedType.MESSAGES ? 'lg:col-span-9' : 'lg:col-span-6'}`}>
+          {activeFeed === FeedType.DISCOVERY && !isSyncing && (
+            <div className="space-y-0.5">
+              <StoryBar 
+                stories={stories} 
+                currentUser={currentUser} 
+                onAddStory={() => setIsCreateModalOpen(true)} 
+                onViewStory={(s) => setStories(prev => prev.map(item => item.id === s.id ? { ...item, isSeen: true } : item))}
+                onNavigateToProfile={handleNavigateToProfile}
+              />
+              <SignalSeparator className="opacity-20" />
+              <ReelRibbon 
+                reels={reels.filter(r => ['zen_architect', 'neuro_traveler', 'quantum_coder'].includes(r.author.username))} 
+                onReelClick={() => changeFeed(FeedType.REELS)}
+              />
+              <SignalSeparator className="mt-0.5" />
+            </div>
+          )}
           {renderContent()}
         </main>
 
-        {activeFeed !== FeedType.MESSAGES && activeFeed !== FeedType.PROFILE && (
-          <aside className="hidden lg:block lg:col-span-3 sticky top-32 h-fit">
-            <div className="glass rounded-[2.5rem] p-10 border-white/5 shadow-xl relative overflow-hidden group hover-lift">
-              <h3 className="font-black mb-8 flex items-center space-x-3 uppercase text-[10px] tracking-[0.3em]">
-                <Flame size={22} className="text-pink-500" />
+        {activeFeed === FeedType.DISCOVERY && (
+          <aside className="hidden lg:block lg:col-span-3 sticky top-20 h-fit space-y-8">
+            <div className="glass rounded-[3rem] p-10 border-white/5 shadow-2xl overflow-hidden relative group">
+              <div className="absolute top-0 right-0 w-32 h-32 merit-gradient opacity-10 blur-[100px] -mr-16 -mt-16" />
+              <h3 className="font-black mb-10 flex items-center space-x-4 uppercase text-[10px] tracking-[0.4em]">
+                <Flame size={24} className="text-rose-500 animate-pulse" />
                 <span>Trending</span>
               </h3>
-              <div className="space-y-6">
-                {['#NeuralArt', '#PrismUI', '#StudNetwork'].map((tag, i) => (
-                  <div key={tag} className="group cursor-pointer flex items-center justify-between">
-                    <p className="text-[11px] font-black group-hover:text-app-accent transition-colors tracking-tight uppercase">{tag}</p>
-                    <div className="text-[8px] font-black text-app-accent bg-white/5 px-2 py-1 rounded-lg">HOT</div>
+              <div className="space-y-8">
+                {['#NeuralArt', '#PrismUI', '#Meritocracy'].map((tag) => (
+                  <div key={tag} className="flex items-center justify-between group/tag cursor-pointer">
+                    <p className="text-[12px] font-bold text-slate-400 group-hover/tag:text-white transition-colors">{tag}</p>
+                    <span className="text-[8px] font-black text-app-accent bg-white/[0.05] px-2 py-1 rounded-lg">LIVE</span>
                   </div>
                 ))}
+              </div>
+            </div>
+
+            <div className="glass rounded-[3rem] p-10 shadow-2xl border-white/5 hover-lift">
+               <h3 className="font-black mb-8 flex items-center space-x-4 uppercase text-[10px] tracking-[0.4em]">
+                <Zap size={24} className="text-amber-500" />
+                <span>Leaderboard</span>
+              </h3>
+              <div className="space-y-6">
+                 {[1, 2, 3].map(i => (
+                   <div key={i} className="flex items-center space-x-4 group cursor-pointer">
+                      <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/5 flex items-center justify-center font-black text-xs group-hover:bg-indigo-500 group-hover:text-white transition-all">{i}</div>
+                      <div className="flex-1">
+                        <p className="text-xs font-bold">@top_node_{i}</p>
+                        <p className="text-[9px] text-app-muted font-black uppercase tracking-widest">Score: {5000 - i*1000}</p>
+                      </div>
+                   </div>
+                 ))}
               </div>
             </div>
           </aside>
         )}
       </div>
 
-      <nav className="lg:hidden glass fixed bottom-0 left-0 right-0 h-24 sm:h-28 rounded-t-[3rem] border-t border-white/10 shadow-3xl flex items-center justify-around px-2 z-[60] backdrop-blur-3xl">
-        <button onClick={() => changeFeed(FeedType.DISCOVERY)} className={`p-3 sm:p-4 rounded-2xl transition-all btn-active ${activeFeed === FeedType.DISCOVERY ? 'text-app-accent scale-110' : 'text-app-muted'}`}>
+      <nav className="lg:hidden glass fixed bottom-0 left-0 right-0 h-24 rounded-t-[3.5rem] border-t border-white/10 shadow-[0_-20px_50px_rgba(0,0,0,0.5)] flex items-center justify-around px-4 z-[90] backdrop-blur-3xl">
+        <button onClick={() => changeFeed(FeedType.DISCOVERY)} className={`p-4 rounded-2xl transition-all ${activeFeed === FeedType.DISCOVERY ? 'text-app-accent bg-white/[0.05] scale-110' : 'text-app-muted'}`}>
           <Compass size={28} />
         </button>
-        <button onClick={() => changeFeed(FeedType.REELS)} className={`p-3 sm:p-4 rounded-2xl transition-all btn-active ${activeFeed === FeedType.REELS ? 'text-app-accent scale-110' : 'text-app-muted'}`}>
+        <button onClick={() => changeFeed(FeedType.REELS)} className={`p-4 rounded-2xl transition-all ${activeFeed === FeedType.REELS ? 'text-app-accent bg-white/[0.05] scale-110' : 'text-app-muted'}`}>
           <Clapperboard size={28} />
         </button>
-        <div className="relative -mt-12 sm:-mt-16">
-          <button onClick={() => setIsCreateModalOpen(true)} className="w-16 h-16 sm:w-20 sm:h-20 merit-gradient rounded-[1.8rem] sm:rounded-[2.2rem] flex items-center justify-center text-white shadow-xl border-4 border-app-bg active:scale-90 transition-all">
-             <Plus strokeWidth={3} className="w-9 h-9 sm:w-11 sm:h-11" />
+        <div className="relative -mt-12">
+          <button onClick={() => setIsCreateModalOpen(true)} className="w-16 h-16 merit-gradient rounded-[1.8rem] flex items-center justify-center text-white shadow-2xl border-4 border-[#010101] active:scale-90 transition-all">
+             <Plus strokeWidth={3} size={32} />
           </button>
         </div>
-        <button className="p-3 sm:p-4 rounded-2xl transition-all text-app-muted btn-active">
-          <Search size={28} />
-        </button>
-        <button onClick={() => changeFeed(FeedType.MESSAGES)} className={`p-3 sm:p-4 rounded-2xl transition-all btn-active ${activeFeed === FeedType.MESSAGES ? 'text-app-accent scale-110' : 'text-app-muted'}`}>
+        <button onClick={() => changeFeed(FeedType.MESSAGES)} className={`p-4 rounded-2xl transition-all ${activeFeed === FeedType.MESSAGES ? 'text-app-accent bg-white/[0.05] scale-110' : 'text-app-muted'}`}>
           <MessageCircle size={28} />
+        </button>
+        <button className="p-4 rounded-2xl transition-all text-app-muted">
+          <Search size={28} />
         </button>
       </nav>
 

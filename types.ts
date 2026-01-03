@@ -13,6 +13,7 @@ export interface Post {
   content: string;
   imageUrl?: string;
   videoUrl?: string;
+  thumbnailUrl?: string;
   timestamp: Date;
   upvotes: number;
   downvotes: number;

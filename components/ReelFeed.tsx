@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   Heart, 
@@ -77,11 +76,14 @@ const ReelItem: React.FC<ReelItemProps> = ({ reel, isActive, onUpvote, onDownvot
   const [voted, setVoted] = useState<'up' | 'down' | null>(null);
 
   useEffect(() => {
-    if (isActive) {
-      videoRef.current?.play().catch(() => {});
-    } else {
-      videoRef.current?.pause();
-      if (videoRef.current) videoRef.current.currentTime = 0;
+    if (isActive && videoRef.current) {
+      const playPromise = videoRef.current.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(() => { /* Autoplay prevented */ });
+      }
+    } else if (videoRef.current) {
+      videoRef.current.pause();
+      videoRef.current.currentTime = 0;
     }
   }, [isActive]);
 
@@ -94,16 +96,16 @@ const ReelItem: React.FC<ReelItemProps> = ({ reel, isActive, onUpvote, onDownvot
       <video
         ref={videoRef}
         src={reel.videoUrl}
+        poster={reel.thumbnailUrl}
         className="h-full w-full object-cover"
         loop
         muted={!isActive}
         playsInline
+        preload="auto"
       />
 
-      {/* Overlay UI */}
       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20 pointer-events-none"></div>
 
-      {/* Right Side Actions */}
       <div className="absolute right-4 bottom-32 flex flex-col items-center space-y-6 pointer-events-auto z-20">
         <div className="flex flex-col items-center">
           <button 
@@ -138,13 +140,12 @@ const ReelItem: React.FC<ReelItemProps> = ({ reel, isActive, onUpvote, onDownvot
 
         <div 
           onClick={handleProfileClick}
-          className="w-12 h-12 rounded-full border-2 border-white/20 overflow-hidden animate-spin-slow p-1 cursor-pointer"
+          className="w-12 h-12 rounded-full border-2 border-white/20 overflow-hidden p-1 cursor-pointer"
         >
           <img src={reel.author.avatar} className="w-full h-full rounded-full object-cover" />
         </div>
       </div>
 
-      {/* Bottom Content Area */}
       <div className="absolute bottom-6 left-6 right-16 pointer-events-auto z-20">
         <div className="flex items-center space-x-3 mb-4">
           <div 
@@ -183,7 +184,6 @@ const ReelItem: React.FC<ReelItemProps> = ({ reel, isActive, onUpvote, onDownvot
         </div>
       </div>
 
-      {/* AI Quality Indicator */}
       {reel.aiBadge && (
         <div className="absolute top-6 right-6 px-3 py-1 bg-white/10 backdrop-blur-xl border border-white/10 rounded-lg text-[8px] font-black text-white uppercase tracking-widest">
           AI {reel.aiBadge.label} Signal

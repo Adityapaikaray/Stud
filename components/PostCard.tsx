@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Post, Comment, User } from '../types';
 import { 
@@ -19,8 +18,16 @@ import {
   Music,
   BarChart2,
   Eye,
-  Zap
+  Zap,
+  Copy,
+  Check,
+  Twitter,
+  ExternalLink,
+  Play,
+  X,
+  Repeat
 } from 'lucide-react';
+import { getPersonalizedStrategy } from '../services/geminiService';
 
 interface PostCardProps {
   post: Post;
@@ -38,13 +45,21 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpvote, onDownvote, current
   const [isExpanded, setIsExpanded] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
+  const [isReposted, setIsReposted] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [localComments, setLocalComments] = useState<Comment[]>(post.comments || []);
+  
+  const [showMusicSuggestions, setShowMusicSuggestions] = useState(false);
+  const [suggestedSongs, setSuggestedSongs] = useState<string[]>([]);
+  const [loadingSongs, setLoadingSongs] = useState(false);
+  const [attachedSong, setAttachedSong] = useState<string | undefined>(post.song);
+  
   const menuRef = useRef<HTMLDivElement>(null);
   
   const isAuthor = currentUser?.id === post.author.id;
-  const isHighQuality = post.aiBadge?.label.includes('Signal');
+  const isHighQuality = post.aiBadge?.label.includes('High') || post.author.meritScore > 1000;
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -88,20 +103,49 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpvote, onDownvote, current
     setCommentText('');
   };
 
-  const handleSave = () => {
-    setIsSaved(!isSaved);
+  const handleCopyLink = () => {
+    const url = `${window.location.origin}/post/${post.id}`;
+    navigator.clipboard.writeText(url);
+    setLinkCopied(true);
+    setTimeout(() => {
+      setLinkCopied(false);
+      setShowMenu(false);
+    }, 2000);
   };
 
-  const handleProfileClick = () => {
-    if (onNavigateToProfile) {
-      onNavigateToProfile(post.author);
+  const handleFetchMusicSuggestions = async () => {
+    setLoadingSongs(true);
+    setShowMenu(false);
+    setShowMusicSuggestions(true);
+    try {
+      const strategy = await getPersonalizedStrategy(post.author.username, post.content);
+      setSuggestedSongs(strategy.songs || ["Neural Pulse", "Data Stream", "Synth Voyager"]);
+    } catch (e) {
+      setSuggestedSongs(["Ethereal Drift", "Cyber Pulse", "Neon Horizons"]);
+    }
+    setLoadingSongs(false);
+  };
+
+  const handleNativeShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `Stud Post by @${post.author.username}`,
+          text: post.content.substring(0, 100),
+          url: `${window.location.origin}/post/${post.id}`,
+        });
+        setShowMenu(false);
+      } catch (err) {
+        console.error('Error sharing:', err);
+      }
+    } else {
+      handleCopyLink();
     }
   };
 
   const handleDownload = async () => {
     const url = post.imageUrl || post.videoUrl;
     if (!url) return;
-    
     setIsDownloading(true);
     setShowMenu(false);
     try {
@@ -123,14 +167,20 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpvote, onDownvote, current
   };
 
   return (
-    <div className={`glass rounded-[2rem] sm:rounded-[2.8rem] overflow-hidden group relative flex flex-col hover-lift border-white/5 ${isHighQuality ? 'ring-1 ring-white/10' : ''}`}>
-      {/* Media Content */}
+    <div className={`glass rounded-[2.5rem] overflow-hidden group relative flex flex-col transition-all duration-700 hover:shadow-[0_40px_80px_-20px_rgba(0,0,0,0.6)] ${isHighQuality ? 'ring-1 ring-white/15' : 'border-white/5'}`}>
+      
+      {isHighQuality && (
+        <div className="absolute -inset-4 merit-gradient opacity-[0.03] blur-3xl pointer-events-none group-hover:opacity-[0.06] transition-opacity duration-1000" />
+      )}
+
       {(post.imageUrl || post.videoUrl) && (
-        <div className="relative aspect-video sm:aspect-auto w-full overflow-hidden bg-black/20">
+        <div className="relative aspect-video w-full overflow-hidden bg-black/40">
+          <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-transparent z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          
           {post.videoUrl ? (
             <video 
               src={post.videoUrl} 
-              className="w-full h-full object-cover max-h-[640px]"
+              className="w-full h-full object-cover max-h-[700px]"
               autoPlay 
               muted 
               loop 
@@ -140,279 +190,319 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpvote, onDownvote, current
             <img 
               src={post.imageUrl} 
               alt="Stud Visual" 
-              className="w-full h-full object-cover max-h-[640px] hover:scale-105 transition-transform duration-[1.5s]" 
+              className="w-full h-full object-cover max-h-[700px] transition-transform duration-[2s] group-hover:scale-[1.03]" 
             />
           )}
           
-          <div className="absolute top-4 left-4 sm:top-6 sm:left-6 z-20 flex flex-col space-y-3">
+          <div className="absolute top-6 left-6 z-20 flex flex-col space-y-3">
              <div className="flex items-center space-x-3">
                 <div 
-                  onClick={handleProfileClick}
-                  className="relative cursor-pointer transition-transform duration-500 hover:scale-110"
+                  onClick={() => onNavigateToProfile?.(post.author)}
+                  className="relative cursor-pointer transition-all hover:scale-110 active:scale-90"
                 >
                     <img 
                       src={post.author.avatar} 
                       alt={post.author.username} 
-                      className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl object-cover border border-white/20 shadow-2xl" 
+                      className="w-10 h-10 rounded-2xl object-cover ring-2 ring-white/10 shadow-2xl" 
                     />
-                    <div className="absolute -bottom-1 -right-1 merit-gradient rounded-lg p-0.5 border border-black shadow-lg">
-                        <ShieldCheck className="text-white w-2 h-2 sm:w-2.5 sm:h-2.5" />
-                    </div>
+                    {isHighQuality && (
+                      <div className="absolute -bottom-1 -right-1 merit-gradient rounded-lg p-0.5 border border-black shadow-lg">
+                        <ShieldCheck className="text-white w-2.5 h-2.5" />
+                      </div>
+                    )}
                 </div>
                 <div 
-                  onClick={handleProfileClick}
-                  className="bg-black/30 backdrop-blur-xl px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl border border-white/10 cursor-pointer hover:bg-black/50 transition-colors"
+                  onClick={() => onNavigateToProfile?.(post.author)}
+                  className="bg-black/40 backdrop-blur-2xl px-4 py-2 rounded-2xl border border-white/10 cursor-pointer hover:bg-black/60 transition-all"
                 >
-                    <h3 className="font-black text-white text-[10px] sm:text-[12px] tracking-tight">@{post.author.username}</h3>
+                    <h3 className="font-bold text-white text-xs tracking-tight">@{post.author.username}</h3>
                 </div>
              </div>
-             
-             {post.song && (
-                <div className="bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 flex items-center space-x-2 w-fit max-w-[160px] overflow-hidden group/song">
-                   <Music size={12} className="text-white animate-pulse shrink-0" />
-                   <span className="text-[9px] font-black text-white/90 uppercase tracking-widest whitespace-nowrap overflow-hidden">
-                     <span className="inline-block animate-marquee">{post.song}</span>
-                   </span>
-                </div>
-             )}
           </div>
 
-          {isAuthor && (
-            <button 
-              onClick={() => setShowAnalytics(!showAnalytics)}
-              className="absolute bottom-4 right-4 z-20 p-2.5 bg-black/40 backdrop-blur-xl border border-white/10 rounded-xl text-white hover:bg-indigo-500 transition-all active:scale-90 flex items-center space-x-2"
-            >
-              <BarChart2 size={16} />
-              <span className="text-[9px] font-black uppercase tracking-widest">Pulse</span>
-            </button>
-          )}
+          <div className="absolute bottom-6 left-6 z-20 flex space-x-2">
+            {attachedSong && (
+              <div className="bg-black/40 backdrop-blur-2xl px-4 py-2 rounded-2xl border border-white/10 flex items-center space-x-2 animate-float">
+                <Music size={12} className="text-white shrink-0" />
+                <span className="text-[10px] font-bold text-white/90 uppercase tracking-widest whitespace-nowrap max-w-[120px] overflow-hidden">
+                  {attachedSong}
+                </span>
+                {isAuthor && (
+                  <button onClick={() => setAttachedSong(undefined)} className="hover:text-red-400 ml-1">
+                    <X size={10} />
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
-      {/* Analytics Overlay */}
-      {showAnalytics && isAuthor && (
-        <div className="absolute inset-0 z-40 bg-black/80 backdrop-blur-2xl p-8 flex flex-col animate-in fade-in zoom-in-95 duration-300">
-          <div className="flex justify-between items-center mb-8">
-            <h4 className="text-xs font-black uppercase tracking-[0.3em] text-app-accent flex items-center space-x-2">
-              <Zap size={14} className="animate-pulse" />
-              <span>Real-time Signal Analysis</span>
-            </h4>
-            <button onClick={() => setShowAnalytics(false)} className="text-slate-400 hover:text-white transition-colors">
-              <ChevronDown size={24} />
-            </button>
-          </div>
-          
-          <div className="flex-1 flex flex-col justify-center">
-            <div className="grid grid-cols-2 gap-4 mb-8">
-              <div className="glass p-5 rounded-2xl border-white/5">
-                <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-1">Signal Views</p>
-                <div className="flex items-center space-x-2">
-                  <Eye size={14} className="text-indigo-400" />
-                  <span className="text-xl font-black">{post.views?.toLocaleString() || '1,242'}</span>
-                </div>
-              </div>
-              <div className="glass p-5 rounded-2xl border-white/5">
-                <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-1">Merit Boosts</p>
-                <div className="flex items-center space-x-2">
-                  <TrendingIcon size={14} className="text-emerald-400" />
-                  <span className="text-xl font-black">{post.upvotes}</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="relative h-40 w-full glass rounded-2xl border-white/5 p-4 overflow-hidden">
-              <div className="absolute inset-0 bg-indigo-500/5 animate-pulse" />
-              <svg className="w-full h-full" viewBox="0 0 100 40" preserveAspectRatio="none">
-                <path 
-                  d="M0,35 Q10,10 20,30 T40,15 T60,25 T80,5 T100,20" 
-                  fill="none" 
-                  stroke="url(#gradient-pulse)" 
-                  strokeWidth="2"
-                  className="animate-dash"
-                  strokeDasharray="200"
-                  strokeDashoffset="200"
-                />
-                <defs>
-                  <linearGradient id="gradient-pulse" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stopColor="#ff0080" />
-                    <stop offset="100%" stopColor="#00dfd8" />
-                  </linearGradient>
-                </defs>
-              </svg>
-              <div className="absolute bottom-2 left-4 text-[8px] font-black text-slate-600 uppercase tracking-widest">
-                Last 24h Signal Propagation
-              </div>
-            </div>
-          </div>
-          
-          <p className="mt-8 text-[9px] text-center text-slate-500 font-black uppercase tracking-widest">
-            Data recalibrated every 5ms • High Fidelity Stream
-          </p>
-        </div>
-      )}
-
-      {/* Interactions & Text */}
-      <div className="p-5 sm:p-10 flex flex-col flex-1">
-        <div className="flex items-center justify-between mb-6 sm:mb-8">
-          <div className="flex items-center space-x-3 sm:space-x-5">
-            <div className="flex items-center bg-white/5 rounded-2xl p-1 sm:p-1.5 border border-white/5 shadow-inner backdrop-blur-md">
+      <div className="p-8 sm:p-10 flex flex-col">
+        {/* Interaction Bar - Cleaned up to only show primary interactions */}
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center space-x-6">
+            <div className="flex items-center space-x-2">
               <button 
                 onClick={handleUpvote}
-                className={`p-2 sm:p-3 rounded-xl transition-all btn-active ${voteStatus === 'up' ? 'text-white merit-gradient shadow-lg' : 'text-app-muted hover:text-white'}`}
+                className={`transition-all active:scale-125 ${voteStatus === 'up' ? 'text-pink-500 drop-shadow-[0_0_8px_rgba(236,72,153,0.5)]' : 'text-app-muted hover:text-white'}`}
               >
                 <Heart 
                   fill={voteStatus === 'up' ? 'currentColor' : 'none'} 
-                  className={`transition-transform duration-300 w-5 h-5 sm:w-6 sm:h-6 ${isHeartPopping ? 'scale-150' : 'scale-100'}`}
+                  className={`w-6 h-6 ${isHeartPopping ? 'animate-bounce' : ''}`}
                 />
               </button>
-              <div className="px-2 sm:px-4">
-                <span className="text-xs sm:text-sm font-black text-app-text tabular-nums">
-                  {(post.upvotes - post.downvotes + (voteStatus === 'up' ? 1 : voteStatus === 'down' ? -1 : 0)).toLocaleString()}
-                </span>
-              </div>
+              <span className={`text-sm font-black tabular-nums ${voteStatus === 'up' ? 'text-white' : 'text-app-muted'}`}>
+                {(post.upvotes - post.downvotes + (voteStatus === 'up' ? 1 : voteStatus === 'down' ? -1 : 0)).toLocaleString()}
+              </span>
               <button 
                 onClick={handleDownvote}
-                className={`p-2 sm:p-3 rounded-xl transition-all btn-active ${voteStatus === 'down' ? 'text-white bg-white/10 shadow-lg' : 'text-app-muted hover:text-white'}`}
+                className={`transition-all active:scale-125 ${voteStatus === 'down' ? 'text-indigo-400' : 'text-app-muted hover:text-white'}`}
               >
-                <HeartCrack fill={voteStatus === 'down' ? 'currentColor' : 'none'} className="w-5 h-5 sm:w-6 sm:h-6" />
+                <HeartCrack fill={voteStatus === 'down' ? 'currentColor' : 'none'} className="w-6 h-6" />
               </button>
             </div>
             
             <button 
               onClick={() => setShowComments(!showComments)}
-              className={`flex items-center space-x-2 px-4 py-2.5 sm:px-6 sm:py-4 rounded-2xl transition-all btn-active border ${showComments ? 'merit-gradient text-white border-transparent' : 'bg-white/5 text-app-muted border-white/5'}`}
+              className={`flex items-center space-x-2 transition-all active:scale-110 ${showComments ? 'text-app-accent' : 'text-app-muted hover:text-white'}`}
             >
-              <MessageSquare className="w-4 h-4 sm:w-5 sm:h-5" />
-              <span className="text-[10px] sm:text-xs font-black">{localComments.length}</span>
-            </button>
-          </div>
-
-          <div className="flex items-center space-x-2 sm:space-x-3">
-            <button className="p-2 sm:p-3 rounded-xl bg-white/5 text-app-muted hover:text-white transition-all border border-white/5 btn-active">
-              <Share2 className="w-4 h-4 sm:w-5 sm:h-5" />
+              <MessageSquare className="w-6 h-6" />
+              <span className="text-sm font-black">{localComments.length}</span>
             </button>
 
             <button 
-              onClick={handleSave}
-              className={`p-2 sm:p-3 rounded-xl transition-all border btn-active ${isSaved ? 'bg-app-accent/20 text-app-accent border-app-accent/30' : 'bg-white/5 text-app-muted border-white/5 hover:text-white'}`}
-              title={isSaved ? "Saved to your network" : "Save to network"}
+              onClick={() => setIsReposted(!isReposted)}
+              className={`flex items-center space-x-2 transition-all active:rotate-180 ${isReposted ? 'text-emerald-400' : 'text-app-muted hover:text-white'}`}
             >
-              <Bookmark className={`w-4 h-4 sm:w-5 sm:h-5 ${isSaved ? 'fill-current' : ''}`} />
+              <Repeat className="w-6 h-6" />
+              <span className="text-sm font-black">{isReposted ? 1 : 0}</span>
             </button>
-            
+          </div>
+
+          <div className="flex items-center space-x-5">
             <div className="relative" ref={menuRef}>
               <button 
                 onClick={() => setShowMenu(!showMenu)}
-                className="p-2 sm:p-3 rounded-xl bg-white/5 text-app-muted hover:text-white transition-all border border-white/5 btn-active"
+                className="text-app-muted hover:text-white transition-all p-1"
               >
-                <MoreVertical className="w-4 h-4 sm:w-5 sm:h-5" />
+                <MoreVertical className="w-6 h-6" />
               </button>
               {showMenu && (
-                <div className="absolute right-0 bottom-full mb-4 w-40 sm:w-48 glass rounded-2xl border border-white/10 shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-bottom-2">
+                <div className="absolute right-0 bottom-full mb-4 w-60 glass rounded-[2rem] border border-white/10 shadow-2xl z-50 overflow-hidden animate-spring p-2">
+                   {/* Share Option in Menu */}
+                   <button 
+                    onClick={handleNativeShare}
+                    className="w-full px-5 py-4 flex items-center space-x-3 text-[10px] font-black text-app-text hover:bg-white/10 rounded-2xl transition-all uppercase tracking-widest"
+                   >
+                     <Share2 size={16} className="text-indigo-400" />
+                     <span>Broadcast Signal</span>
+                   </button>
+
+                   {/* Save Option in Menu */}
+                   <button 
+                    onClick={() => { setIsSaved(!isSaved); setShowMenu(false); }}
+                    className={`w-full px-5 py-4 flex items-center space-x-3 text-[10px] font-black hover:bg-white/10 rounded-2xl transition-all uppercase tracking-widest ${isSaved ? 'text-app-accent' : 'text-app-text'}`}
+                   >
+                     <Bookmark size={16} className={isSaved ? 'fill-current' : ''} />
+                     <span>{isSaved ? 'Archive Detached' : 'Secure to Archive'}</span>
+                   </button>
+
+                   {/* Copy link in menu */}
+                   <button 
+                    onClick={handleCopyLink}
+                    className="w-full px-5 py-4 flex items-center justify-between text-[10px] font-black text-app-text hover:bg-white/10 rounded-2xl transition-all uppercase tracking-widest"
+                   >
+                     <div className="flex items-center space-x-3">
+                       {linkCopied ? <Check size={16} className="text-emerald-400" /> : <Copy size={16} className="text-slate-400" />}
+                       <span>{linkCopied ? 'Link Secured' : 'Clone Freq'}</span>
+                     </div>
+                   </button>
+
+                   {/* Archive (Download) in Menu */}
                    <button 
                     onClick={handleDownload}
                     disabled={isDownloading}
-                    className="w-full px-4 py-3 sm:px-5 sm:py-4 flex items-center space-x-3 text-[10px] sm:text-xs font-black text-app-text hover:bg-white/10 transition-colors uppercase tracking-[0.1em]"
+                    className="w-full px-5 py-4 flex items-center space-x-3 text-[10px] font-black text-app-text hover:bg-white/10 rounded-2xl transition-all uppercase tracking-widest"
                    >
-                     {isDownloading ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} className="text-app-accent" />}
-                     <span>Download</span>
+                     {isDownloading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} className="text-app-accent" />}
+                     <span>Synthesize local copy</span>
                    </button>
+                   
+                   {/* Music Suggestion in Menu */}
+                   <button 
+                    onClick={handleFetchMusicSuggestions}
+                    className="w-full px-5 py-4 flex items-center space-x-3 text-[10px] font-black text-app-text hover:bg-white/10 rounded-2xl transition-all uppercase tracking-widest"
+                   >
+                     <Music size={16} className="text-pink-500" />
+                     <span>Suggest Sonic Pair</span>
+                   </button>
+
+                   {/* Analytics in Menu (Author only) */}
+                   {isAuthor && (
+                     <button 
+                      onClick={() => { setShowAnalytics(!showAnalytics); setShowMenu(false); }}
+                      className="w-full px-5 py-4 flex items-center space-x-3 text-[10px] font-black text-app-text hover:bg-white/10 rounded-2xl transition-all uppercase tracking-widest"
+                     >
+                       <BarChart2 size={16} className="text-indigo-400" />
+                       <span>Pulse Data</span>
+                     </button>
+                   )}
                 </div>
               )}
             </div>
           </div>
         </div>
 
-        {/* Caption with Toggle Logic */}
-        <div className="px-1 sm:px-2">
-          <p className={`text-app-text text-[14px] sm:text-[16px] font-medium leading-relaxed tracking-tight transition-all duration-300 ${isExpanded ? '' : 'line-clamp-2'}`}>
+        <div className="px-2">
+          <p className={`text-app-text text-[15px] sm:text-[17px] font-medium leading-[1.6] tracking-tight transition-all duration-500 ${isExpanded ? '' : 'line-clamp-3'}`}>
             {post.content}
           </p>
-          {post.content.length > 100 && (
+          {post.content.length > 140 && (
             <button 
               onClick={() => setIsExpanded(!isExpanded)}
-              className="mt-3 sm:mt-4 flex items-center space-x-1.5 text-[10px] sm:text-[11px] font-black text-app-accent uppercase tracking-[0.15em] hover:opacity-70 transition-opacity active:scale-95"
+              className="mt-4 flex items-center space-x-2 text-[10px] font-black text-app-accent uppercase tracking-[0.2em] hover:opacity-70 transition-opacity"
             >
-              <span>{isExpanded ? 'Show Less' : 'Read More'}</span>
+              <span>{isExpanded ? 'Collapse' : 'Decompress Signal'}</span>
               {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
             </button>
           )}
         </div>
 
-        {/* AI Badge */}
-        {!showComments && (
-          <div className={`mt-6 sm:mt-10 flex items-center space-x-3 p-3 sm:p-4 rounded-2xl ${isHighQuality ? 'bg-white/5 border-white/10 border' : 'bg-white/5'}`}>
-             <Sparkles className="text-app-accent animate-pulse w-3.5 h-3.5 sm:w-4 sm:h-4" />
-             <p className="text-[9px] sm:text-[10px] text-app-muted font-black tracking-[0.2em] uppercase">
-               {post.aiBadge?.label || 'Calibrating merit...'}
-             </p>
+        {showMusicSuggestions && (
+          <div className="mt-8 p-6 glass rounded-3xl border border-pink-500/20 animate-spring relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-24 h-24 merit-gradient opacity-10 blur-2xl -mr-12 -mt-12" />
+            <div className="flex items-center justify-between mb-4">
+               <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-pink-400">Sonic Matches</h4>
+               <button onClick={() => setShowMusicSuggestions(false)} className="text-slate-500 hover:text-white">
+                 <X size={14} />
+               </button>
+            </div>
+            {loadingSongs ? (
+              <div className="flex justify-center py-4"><Loader2 size={24} className="animate-spin text-pink-500" /></div>
+            ) : (
+              <div className="space-y-2">
+                {suggestedSongs.map((song, i) => (
+                  <button 
+                    key={i}
+                    onClick={() => { setAttachedSong(song); setShowMusicSuggestions(false); }}
+                    className="w-full flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/5 hover:border-pink-500/30 hover:bg-pink-500/5 transition-all group/song"
+                  >
+                    <div className="flex items-center space-x-3">
+                       <Play size={10} fill="currentColor" className="text-pink-400" />
+                       <span className="text-xs font-bold text-slate-200">{song}</span>
+                    </div>
+                    {isAuthor && <span className="text-[8px] font-black uppercase text-pink-500 opacity-0 group-hover/song:opacity-100 transition-opacity">Select</span>}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
-        {/* Comments Section */}
+        {!showComments && !showMusicSuggestions && post.aiBadge && (
+          <div className="mt-8 flex items-center space-x-3 p-4 rounded-3xl bg-white/[0.02] border border-white/5 group-hover:border-white/10 transition-colors">
+             <div className="p-2 bg-indigo-500/10 rounded-xl">
+               <Sparkles className="text-indigo-400 animate-pulse w-4 h-4" />
+             </div>
+             <div>
+               <p className="text-[10px] text-app-text font-black tracking-widest uppercase">
+                 {post.aiBadge.label}
+               </p>
+               <p className="text-[9px] text-app-muted font-medium mt-0.5">{post.aiBadge.description}</p>
+             </div>
+          </div>
+        )}
+
         {showComments && (
-          <div className="mt-8 sm:mt-10 border-t border-white/5 pt-6 sm:pt-8 animate-fluid-in">
-            <div className="flex items-center space-x-3 sm:space-x-4 mb-6 sm:mb-8 bg-white/5 rounded-3xl p-1.5 sm:p-2 border border-white/5">
+          <div className="mt-10 pt-10 border-t border-white/5 animate-spring">
+            <div className="flex items-center space-x-4 mb-8 bg-white/[0.02] rounded-[2rem] p-2 border border-white/5">
               <input 
                 type="text" 
                 value={commentText}
                 onChange={(e) => setCommentText(e.target.value)}
                 placeholder="Share perspective..."
-                className="flex-1 bg-transparent border-none focus:ring-0 text-xs sm:text-sm font-medium text-app-text px-3 sm:px-4 placeholder-app-muted"
+                className="flex-1 bg-transparent border-none focus:ring-0 text-sm font-medium text-app-text px-4 placeholder-app-muted"
                 onKeyPress={(e) => e.key === 'Enter' && handlePostComment()}
               />
               <button 
                 onClick={handlePostComment}
-                className="p-2.5 sm:p-3.5 merit-gradient text-white rounded-2xl shadow-lg btn-active"
+                className="p-3.5 merit-gradient text-white rounded-2xl shadow-xl hover:scale-105 active:scale-90 transition-all"
               >
-                <Send className="w-4 h-4 sm:w-5 sm:h-5" />
+                <Send className="w-5 h-5" />
               </button>
             </div>
             
-            <div className="space-y-4 sm:space-y-6 max-h-[280px] sm:max-h-[320px] overflow-y-auto no-scrollbar pr-2">
-              {localComments.map((comment) => (
-                <div key={comment.id} className="flex space-x-3 sm:space-x-4 animate-fluid-in">
+            <div className="space-y-6 max-h-[350px] overflow-y-auto no-scrollbar pr-2">
+              {localComments.length > 0 ? localComments.map((comment) => (
+                <div key={comment.id} className="flex space-x-4 animate-spring">
                   <img 
                     onClick={() => onNavigateToProfile?.(comment.author)}
                     src={comment.author.avatar} 
-                    className="w-8 h-8 sm:w-10 sm:h-10 rounded-2xl object-cover border border-white/5 cursor-pointer" 
+                    className="w-10 h-10 rounded-2xl object-cover border border-white/10 cursor-pointer hover:scale-110 transition-transform" 
                   />
                   <div className="flex-1">
-                    <div className="flex items-center justify-between mb-1 sm:mb-2">
+                    <div className="flex items-center justify-between mb-1.5">
                       <span 
                         onClick={() => onNavigateToProfile?.(comment.author)}
-                        className="text-[10px] sm:text-xs font-black text-app-accent cursor-pointer"
+                        className="text-[11px] font-black text-indigo-400 cursor-pointer hover:text-white transition-colors"
                       >
                         @{comment.author.username}
                       </span>
                     </div>
-                    <p className="text-[11px] sm:text-xs text-app-text leading-relaxed bg-white/5 p-3 sm:p-4 rounded-2xl border border-white/5">
-                      {comment.content}
-                    </p>
+                    <div className="bg-white/[0.03] p-4 rounded-2xl border border-white/5">
+                      <p className="text-sm text-app-text leading-relaxed">
+                        {comment.content}
+                      </p>
+                    </div>
                   </div>
                 </div>
-              ))}
+              )) : (
+                <div className="py-10 text-center opacity-30">
+                  <p className="text-[10px] font-black uppercase tracking-widest">Awaiting interaction</p>
+                </div>
+              )}
             </div>
           </div>
         )}
       </div>
 
-      <style>{`
-        @keyframes marquee {
-          0% { transform: translateX(100%); }
-          100% { transform: translateX(-100%); }
-        }
-        .animate-marquee {
-          display: inline-block;
-          animation: marquee 8s linear infinite;
-        }
-        @keyframes dash {
-          to { strokeDashoffset: 0; }
-        }
-        .animate-dash {
-          animation: dash 3s ease-in-out forwards infinite alternate;
-        }
-      `}</style>
+      {showAnalytics && isAuthor && (
+        <div className="absolute inset-0 z-[60] bg-black/90 backdrop-blur-3xl p-10 flex flex-col animate-spring">
+          <div className="flex justify-between items-center mb-12">
+            <div>
+              <h4 className="text-xl font-black tracking-tight flex items-center space-x-3">
+                <Zap size={24} className="text-app-accent animate-pulse" />
+                <span>Signal Analytics</span>
+              </h4>
+              <p className="text-[10px] text-app-muted font-black uppercase tracking-[0.3em] mt-1">Real-time Node Propagation</p>
+            </div>
+            <button 
+              onClick={() => setShowAnalytics(false)} 
+              className="p-3 bg-white/5 rounded-2xl text-slate-400 hover:text-white transition-all"
+            >
+              <ChevronDown size={24} />
+            </button>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-6 mb-12">
+            <div className="glass p-6 rounded-3xl border-white/10">
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Total Impressions</p>
+              <div className="flex items-center space-x-3">
+                <Eye size={20} className="text-indigo-400" />
+                <span className="text-2xl font-black">{(post.views || 1242).toLocaleString()}</span>
+              </div>
+            </div>
+            <div className="glass p-6 rounded-3xl border-white/10">
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Merit Velocity</p>
+              <div className="flex items-center space-x-3">
+                <TrendingIcon size={20} className="text-emerald-400" />
+                <span className="text-2xl font-black">+{post.upvotes}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

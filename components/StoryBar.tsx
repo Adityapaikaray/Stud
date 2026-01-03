@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React, { Fragment } from 'react';
 import { Story, User } from '../types';
 import { Plus, Sparkles } from 'lucide-react';
 
@@ -11,57 +10,63 @@ interface StoryBarProps {
   onNavigateToProfile?: (user: User) => void;
 }
 
+// Vertical Signal Thread helper - tightened even further
+const VerticalSignal: React.FC = () => (
+  <div className="flex flex-col items-center h-8 opacity-20 shrink-0 self-center mx-1">
+    <div className="w-px flex-1 bg-gradient-to-b from-transparent via-white/40 to-transparent" />
+    <div className="my-1 w-0.5 h-0.5 rounded-full bg-indigo-400 blur-[0.5px]" />
+    <div className="w-px flex-1 bg-gradient-to-t from-transparent via-white/40 to-transparent" />
+  </div>
+);
+
 const StoryBar: React.FC<StoryBarProps> = ({ stories, currentUser, onAddStory, onViewStory, onNavigateToProfile }) => {
   return (
-    <div className="flex items-center space-x-4 sm:space-x-6 py-2 sm:py-4 px-1 overflow-x-auto no-scrollbar scroll-smooth">
-      {/* Current User Create Story */}
-      <div className="flex-shrink-0 flex flex-col items-center space-y-2 sm:space-y-3 group cursor-pointer" onClick={onAddStory}>
-        <div className="relative btn-active">
-          <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-[1.8rem] sm:rounded-[2rem] p-[2px] bg-white/5 border-2 border-dashed border-white/10 flex items-center justify-center group-hover:border-white/30 transition-all duration-700 overflow-hidden shadow-xl">
-             <img src={currentUser.avatar} className="w-full h-full object-cover rounded-[1.6rem] sm:rounded-[1.8rem] opacity-30 grayscale group-hover:grayscale-0 group-hover:opacity-60 transition-all" alt="Add" />
-             <div className="absolute inset-0 flex items-center justify-center">
-                <div className="merit-gradient text-white p-2.5 sm:p-3 rounded-2xl shadow-2xl group-hover:scale-110 transition-transform">
-                  <Plus strokeWidth={3} className="w-5 h-5 sm:w-6 sm:h-6" />
-                </div>
+    <div className="flex items-center py-1 px-1 overflow-x-auto no-scrollbar scroll-smooth">
+      {/* Compact Add Story Bubble */}
+      <div className="flex-shrink-0 flex flex-col items-center group cursor-pointer mr-2" onClick={onAddStory}>
+        <div className="relative p-[3px]">
+          <div className="relative w-16 h-16 bg-app-bg rounded-[1.8rem] p-[2px] border border-white/10 group-hover:border-indigo-500/50 transition-all duration-500">
+             <img src={currentUser.avatar} className="w-full h-full object-cover rounded-[1.6rem] opacity-60 group-hover:opacity-100 transition-all duration-500" alt="Add Story" />
+             <div className="absolute -bottom-1 -right-1 merit-gradient text-white p-1 rounded-lg border-2 border-app-bg shadow-xl group-hover:scale-110 transition-transform">
+               <Plus size={14} strokeWidth={3} />
              </div>
           </div>
         </div>
-        <span className="text-[8px] sm:text-[10px] font-black uppercase tracking-[0.2em] text-app-muted group-hover:text-white transition-colors">Post</span>
       </div>
 
-      {/* Stories List */}
-      {stories.map((story) => (
-        <div 
-          key={story.id} 
-          className="flex-shrink-0 flex flex-col items-center space-y-2 sm:space-y-3 group"
-        >
-          <div 
-            onClick={() => onViewStory(story)}
-            className="relative p-[2px] sm:p-[3px] btn-active cursor-pointer"
-          >
-            {/* Animated Vibrant Border */}
-            <div className={`absolute inset-0 rounded-[1.8rem] sm:rounded-[2rem] ${!story.isSeen ? 'merit-gradient' : 'bg-white/10 opacity-30'} transition-opacity`}></div>
-            
-            <div className="relative w-16 h-16 sm:w-20 sm:h-20 bg-app-bg rounded-[1.65rem] sm:rounded-[1.85rem] p-[2px] sm:p-[2.5px] z-10">
-              <img 
-                src={story.author.avatar} 
-                className={`w-full h-full object-cover rounded-[1.5rem] sm:rounded-[1.7rem] transition-all duration-1000 group-hover:scale-110 ${story.isSeen ? 'opacity-70 grayscale-[0.2]' : ''}`} 
-                alt={story.author.username} 
-              />
-              {story.isHighMerit && (
-                <div className="absolute -top-1 -right-1 merit-gradient p-1 rounded-lg border-2 border-app-bg shadow-xl">
-                  <Sparkles size={8} className="text-white" />
-                </div>
-              )}
+      {/* Synchronized Bubbles */}
+      {stories.map((story, index) => (
+        <Fragment key={story.id}>
+          <VerticalSignal />
+          <div className="flex-shrink-0 flex flex-col items-center group mx-2">
+            <div 
+              onClick={() => onViewStory(story)}
+              className="relative p-[3px] cursor-pointer transition-transform hover:scale-105 active:scale-95"
+            >
+              {/* Liquid Border Animation */}
+              <div className={`absolute inset-0 rounded-[1.8rem] ${!story.isSeen ? 'merit-gradient animate-pulse-soft' : 'bg-white/10 opacity-30'} transition-all duration-500`}></div>
+              
+              <div className="relative w-16 h-16 bg-app-bg rounded-[1.6rem] p-[2px] z-10">
+                <img 
+                  src={story.author.avatar} 
+                  className={`w-full h-full object-cover rounded-[1.4rem] transition-all duration-700 group-hover:scale-110 ${story.isSeen ? 'opacity-50 grayscale-[0.4]' : ''}`} 
+                  alt={story.author.username} 
+                />
+                {story.isHighMerit && (
+                  <div className="absolute -top-1 -right-1 merit-gradient p-1 rounded-lg border-2 border-app-bg shadow-lg">
+                    <Sparkles size={10} className="text-white" />
+                  </div>
+                )}
+              </div>
             </div>
+            <span 
+              onClick={() => onNavigateToProfile?.(story.author)}
+              className={`text-[9px] font-black uppercase tracking-tight mt-1 transition-colors cursor-pointer hover:text-app-accent ${story.isSeen ? 'text-app-muted' : 'text-app-text'}`}
+            >
+              @{story.author.username.length > 8 ? story.author.username.substring(0, 7) + '..' : story.author.username}
+            </span>
           </div>
-          <span 
-            onClick={() => onNavigateToProfile?.(story.author)}
-            className={`text-[8px] sm:text-[10px] font-black uppercase tracking-tight transition-colors cursor-pointer hover:text-app-accent ${story.isSeen ? 'text-app-muted' : 'text-app-text'}`}
-          >
-            @{story.author.username.length > 9 ? story.author.username.substring(0, 7) + '..' : story.author.username}
-          </span>
-        </div>
+        </Fragment>
       ))}
     </div>
   );

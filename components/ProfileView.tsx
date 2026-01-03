@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { User, Post } from '../types';
 import PostCard from './PostCard';
@@ -32,7 +31,8 @@ import {
   UserCheck,
   Eye,
   ArrowUp,
-  BarChart2
+  BarChart2,
+  Repeat
 } from 'lucide-react';
 
 interface ProfileViewProps {
@@ -42,10 +42,12 @@ interface ProfileViewProps {
   onUpvote: (id: string) => void;
   onDownvote: (id: string) => void;
   onOpenIdentityEdit?: () => void;
+  // Added onNavigateToProfile prop to allow navigation from post cards within profile view
+  onNavigateToProfile?: (user: User) => void;
 }
 
-const ProfileView: React.FC<ProfileViewProps> = ({ user, currentUser, posts, onUpvote, onDownvote, onOpenIdentityEdit }) => {
-  const [activeTab, setActiveTab] = useState<'content' | 'analytics'>('content');
+const ProfileView: React.FC<ProfileViewProps> = ({ user, currentUser, posts, onUpvote, onDownvote, onOpenIdentityEdit, onNavigateToProfile }) => {
+  const [activeTab, setActiveTab] = useState<'content' | 'reposts' | 'analytics'>('content');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   const [strategy, setStrategy] = useState<{ ideas: string[], songs: string[] } | null>(null);
   const [loadingStrategy, setLoadingStrategy] = useState(false);
@@ -57,6 +59,11 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, currentUser, posts, onU
 
   const userPosts = useMemo(() => {
     return posts.filter(p => p.author.id === user.id).sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+  }, [posts, user.id]);
+
+  // Mock reposts for demonstration: showing posts from other authors as if the user reposted them
+  const repostedPosts = useMemo(() => {
+    return posts.filter(p => p.author.id !== user.id).slice(0, 3);
   }, [posts, user.id]);
 
   useEffect(() => {
@@ -175,27 +182,36 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, currentUser, posts, onU
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center justify-center space-x-8">
+      <div className="flex items-center justify-center space-x-4 md:space-x-8 overflow-x-auto no-scrollbar px-4">
         <button 
           onClick={() => setActiveTab('content')}
-          className={`px-8 py-3 rounded-2xl text-[11px] font-black uppercase tracking-[0.3em] transition-all ${activeTab === 'content' ? 'bg-indigo-500 text-white shadow-xl' : 'text-slate-500 hover:text-slate-300'}`}
+          className={`flex-shrink-0 px-6 py-3 rounded-2xl text-[11px] font-black uppercase tracking-[0.3em] transition-all ${activeTab === 'content' ? 'bg-indigo-500 text-white shadow-xl' : 'text-slate-500 hover:text-slate-300'}`}
         >
           Transmissions
+        </button>
+        <button 
+          onClick={() => setActiveTab('reposts')}
+          className={`flex-shrink-0 px-6 py-3 rounded-2xl text-[11px] font-black uppercase tracking-[0.3em] transition-all flex items-center space-x-2 ${activeTab === 'reposts' ? 'bg-emerald-500 text-white shadow-xl' : 'text-slate-500 hover:text-slate-300'}`}
+        >
+          <Repeat size={14} className={activeTab === 'reposts' ? 'text-white' : 'text-slate-500'} />
+          <span>Reposts</span>
         </button>
         {isOwnProfile && (
             <button 
                 onClick={() => setActiveTab('analytics')}
-                className={`px-8 py-3 rounded-2xl text-[11px] font-black uppercase tracking-[0.3em] transition-all ${activeTab === 'analytics' ? 'bg-amber-500 text-white shadow-xl' : 'text-slate-500 hover:text-slate-300'}`}
+                className={`flex-shrink-0 px-6 py-3 rounded-2xl text-[11px] font-black uppercase tracking-[0.3em] transition-all ${activeTab === 'analytics' ? 'bg-amber-500 text-white shadow-xl' : 'text-slate-500 hover:text-slate-300'}`}
             >
-                Live Signal Analytics
+                Analytics
             </button>
         )}
       </div>
 
-      {activeTab === 'content' ? (
+      {activeTab === 'content' || activeTab === 'reposts' ? (
         <div className="space-y-8">
           <div className="flex items-center justify-between px-4">
-            <h3 className="text-[11px] font-black uppercase tracking-[0.4em] text-slate-500">Broadcasting Logs</h3>
+            <h3 className="text-[11px] font-black uppercase tracking-[0.4em] text-slate-500">
+              {activeTab === 'content' ? 'Broadcasting Logs' : 'Echoed Frequencies'}
+            </h3>
             <div className="flex bg-slate-900/50 p-1 rounded-xl border border-white/5">
               <button onClick={() => setViewMode('grid')} className={`p-2 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-indigo-500 text-white' : 'text-slate-500'}`}><Grid size={18} /></button>
               <button onClick={() => setViewMode('list')} className={`p-2 rounded-lg transition-all ${viewMode === 'list' ? 'bg-indigo-500 text-white' : 'text-slate-500'}`}><List size={18} /></button>
@@ -203,8 +219,8 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, currentUser, posts, onU
           </div>
 
           <div className={`grid ${viewMode === 'grid' ? 'grid-cols-2 md:grid-cols-3 gap-6' : 'grid-cols-1 gap-8'}`}>
-            {userPosts.length > 0 ? (
-                userPosts.map(post => (
+            {(activeTab === 'content' ? userPosts : repostedPosts).length > 0 ? (
+                (activeTab === 'content' ? userPosts : repostedPosts).map(post => (
                     viewMode === 'grid' ? (
                         <div key={post.id} className="aspect-square glass rounded-[2rem] overflow-hidden group cursor-pointer border-white/5 shadow-lg relative">
                         {post.imageUrl || post.videoUrl ? (
@@ -212,15 +228,31 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, currentUser, posts, onU
                         ) : (
                             <div className="p-6 h-full flex flex-col justify-between"><p className="text-xs font-medium text-slate-300 line-clamp-4">{post.content}</p><Sparkles size={16} className="text-indigo-500" /></div>
                         )}
+                        {activeTab === 'reposts' && (
+                          <div className="absolute top-3 left-3 bg-emerald-500/80 backdrop-blur-md p-1.5 rounded-lg border border-white/10">
+                            <Repeat size={12} className="text-white" />
+                          </div>
+                        )}
                         </div>
                     ) : (
-                        <PostCard key={post.id} post={post} onUpvote={onUpvote} onDownvote={onDownvote} currentUser={currentUser} />
+                        <div key={post.id} className="relative">
+                          {activeTab === 'reposts' && (
+                            <div className="mb-4 ml-10 flex items-center space-x-2 text-[10px] font-black uppercase tracking-widest text-emerald-400 opacity-60">
+                              <Repeat size={14} />
+                              <span>Echoed by @{user.username}</span>
+                            </div>
+                          )}
+                          {/* Fixed: Pass onNavigateToProfile destructured from props */}
+                          <PostCard post={post} onUpvote={onUpvote} onDownvote={onDownvote} currentUser={currentUser} onNavigateToProfile={onNavigateToProfile} />
+                        </div>
                     )
                 ))
             ) : (
                 <div className="col-span-full py-20 flex flex-col items-center opacity-30">
                     <Zap size={40} className="mb-4" />
-                    <p className="font-black uppercase tracking-widest text-xs">No Transmissions Logged</p>
+                    <p className="font-black uppercase tracking-widest text-xs">
+                      {activeTab === 'content' ? 'No Transmissions Logged' : 'No Echoed Signals'}
+                    </p>
                 </div>
             )}
           </div>
