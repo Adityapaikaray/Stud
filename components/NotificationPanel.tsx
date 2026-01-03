@@ -12,20 +12,22 @@ import {
   Sparkles,
   BellOff
 } from 'lucide-react';
-import { Notification } from '../types';
+import { Notification, User } from '../types';
 
 interface NotificationPanelProps {
   notifications: Notification[];
   isOpen: boolean;
   onClose: () => void;
   onAction: (id: string, action: 'ACCEPT' | 'DECLINE' | 'READ') => void;
+  onNavigateToProfile?: (user: User) => void;
 }
 
 const NotificationPanel: React.FC<NotificationPanelProps> = ({ 
   notifications, 
   isOpen, 
   onClose,
-  onAction
+  onAction,
+  onNavigateToProfile
 }) => {
   useEffect(() => {
     if (isOpen) {
@@ -55,6 +57,14 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
     const hours = Math.floor(minutes / 60);
     if (hours < 24) return `${hours}h ago`;
     return date.toLocaleDateString();
+  };
+
+  const handleActorClick = (e: React.MouseEvent, user?: User) => {
+    if (user && onNavigateToProfile) {
+      e.stopPropagation();
+      onNavigateToProfile(user);
+      onClose();
+    }
   };
 
   return (
@@ -99,7 +109,10 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
                 style={{ animationDelay: `${idx * 0.05}s` }}
               >
                 <div className="flex items-start space-x-5">
-                  <div className="relative shrink-0">
+                  <div 
+                    onClick={(e) => handleActorClick(e, notif.actor)}
+                    className="relative shrink-0 cursor-pointer"
+                  >
                     {notif.actor ? (
                       <img 
                         src={notif.actor.avatar} 
@@ -119,7 +132,14 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-1.5">
                       <p className="text-sm font-medium leading-[1.4] text-slate-200">
-                        {notif.actor && <span className="font-black mr-1.5 text-slate-100">@{notif.actor.username}</span>}
+                        {notif.actor && (
+                          <span 
+                            onClick={(e) => handleActorClick(e, notif.actor)}
+                            className="font-black mr-1.5 text-slate-100 hover:text-app-accent cursor-pointer"
+                          >
+                            @{notif.actor.username}
+                          </span>
+                        )}
                         <span className="text-slate-400">
                           {notif.type === 'UPVOTE' && 'boosted your signal'}
                           {notif.type === 'COMMENT' && 'shared a perspective'}

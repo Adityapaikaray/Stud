@@ -25,6 +25,7 @@ import CreateModal from './components/CreateModal';
 import ProfileView from './components/ProfileView';
 import ChatView from './components/ChatView';
 import StoryBar from './components/StoryBar';
+import IdentityModal from './components/IdentityModal';
 
 // Mock Data
 const MOCK_USER: User = {
@@ -79,6 +80,7 @@ const INITIAL_REELS: Reel[] = [
     timestamp: new Date(),
     upvotes: 1200,
     downvotes: 45,
+    views: 15400,
     comments: []
   }
 ];
@@ -96,6 +98,7 @@ const INITIAL_POSTS: Post[] = [
     timestamp: new Date(Date.now() - 3600000),
     upvotes: 452,
     downvotes: 12,
+    views: 2840,
     aiBadge: {
       label: "High Signal",
       color: "cyan",
@@ -116,6 +119,7 @@ const INITIAL_POSTS: Post[] = [
     timestamp: new Date(Date.now() - 7200000),
     upvotes: 215,
     downvotes: 3,
+    views: 1120,
     imageUrl: "https://picsum.photos/seed/design/800/600",
     comments: []
   }
@@ -133,6 +137,7 @@ const INITIAL_NOTIFICATIONS: Notification[] = [
 ];
 
 const App: React.FC = () => {
+  const [currentUser, setCurrentUser] = useState<User>(MOCK_USER);
   const [posts, setPosts] = useState<Post[]>(INITIAL_POSTS);
   const [reels, setReels] = useState<Reel[]>(INITIAL_REELS);
   const [stories, setStories] = useState<Story[]>(MOCK_STORIES);
@@ -141,7 +146,9 @@ const App: React.FC = () => {
   const [notifications, setNotifications] = useState<Notification[]>(INITIAL_NOTIFICATIONS);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isIdentityModalOpen, setIsIdentityModalOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [viewedUser, setViewedUser] = useState<User>(MOCK_USER);
 
   useEffect(() => {
     document.body.classList.toggle('light-mode', theme === 'light');
@@ -152,11 +159,33 @@ const App: React.FC = () => {
   }, []);
 
   const changeFeed = useCallback((feed: FeedType) => {
-    if (activeFeed === feed) return;
-    setIsSyncing(true);
+    if (activeFeed === feed && feed !== FeedType.PROFILE) return;
+    if (feed === FeedType.PROFILE && activeFeed === FeedType.PROFILE && viewedUser.id === currentUser.id) return;
+    
+    setIsSyncing(feed !== activeFeed);
     setActiveFeed(feed);
     setTimeout(() => setIsSyncing(false), 700);
-  }, [activeFeed]);
+  }, [activeFeed, viewedUser, currentUser.id]);
+
+  const handleNavigateToProfile = useCallback((user: User) => {
+    setViewedUser(user);
+    setIsSyncing(true);
+    setActiveFeed(FeedType.PROFILE);
+    setTimeout(() => setIsSyncing(false), 700);
+  }, []);
+
+  const handleGoToMyProfile = useCallback(() => {
+    setViewedUser(currentUser);
+    changeFeed(FeedType.PROFILE);
+  }, [changeFeed, currentUser]);
+
+  const handleIdentityUpdate = (updatedUser: User) => {
+    setCurrentUser(updatedUser);
+    // If we are looking at our own profile, update the view
+    if (viewedUser.id === updatedUser.id) {
+      setViewedUser(updatedUser);
+    }
+  };
 
   const handlePostCreated = useCallback((newPost: Post) => {
     if (newPost.isReel && newPost.videoUrl) {
@@ -168,8 +197,14 @@ const App: React.FC = () => {
     setIsCreateModalOpen(false);
   }, [changeFeed]);
 
-  const handleUpvote = (id: string) => setPosts(prev => prev.map(p => p.id === id ? { ...p, upvotes: p.upvotes + 1 } : p));
-  const handleDownvote = (id: string) => setPosts(prev => prev.map(p => p.id === id ? { ...p, downvotes: p.downvotes + 1 } : p));
+  const handleUpvote = (id: string) => {
+    setPosts(prev => prev.map(p => p.id === id ? { ...p, upvotes: p.upvotes + 1 } : p));
+    setReels(prev => prev.map(p => p.id === id ? { ...p, upvotes: p.upvotes + 1 } : p));
+  };
+  const handleDownvote = (id: string) => {
+    setPosts(prev => prev.map(p => p.id === id ? { ...p, downvotes: p.downvotes + 1 } : p));
+    setReels(prev => prev.map(p => p.id === id ? { ...p, downvotes: p.downvotes + 1 } : p));
+  };
 
   const unreadCount = useMemo(() => notifications.filter(n => !n.read).length, [notifications]);
 
@@ -177,10 +212,6 @@ const App: React.FC = () => {
     const p = [...posts];
     return p.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
   }, [posts]);
-
-  const handleInstallApp = () => {
-    alert("Stud is a PWA. To 'download' it, use the 'Add to Home Screen' option in your browser menu.");
-  };
 
   const renderContent = () => {
     if (isSyncing) {
@@ -194,11 +225,20 @@ const App: React.FC = () => {
 
     switch (activeFeed) {
       case FeedType.REELS:
-        return <div className="animate-fluid-in"><ReelFeed reels={reels} onUpvote={handleUpvote} onDownvote={handleDownvote} /></div>;
+        return <div className="animate-fluid-in"><ReelFeed reels={reels} onUpvote={handleUpvote} onDownvote={handleDownvote} onNavigateToProfile={handleNavigateToProfile} /></div>;
       case FeedType.PROFILE:
-        return <ProfileView user={MOCK_USER} posts={posts} onUpvote={handleUpvote} onDownvote={handleDownvote} />;
+        return (
+          <ProfileView 
+            user={viewedUser} 
+            currentUser={currentUser} 
+            posts={[...posts, ...reels]} 
+            onUpvote={handleUpvote} 
+            onDownvote={handleDownvote} 
+            onOpenIdentityEdit={() => setIsIdentityModalOpen(true)}
+          />
+        );
       case FeedType.MESSAGES:
-        return <ChatView currentUser={MOCK_USER} />;
+        return <ChatView currentUser={currentUser} onNavigateToProfile={handleNavigateToProfile} />;
       default:
         return (
           <div className="space-y-8 sm:space-y-12 pb-32">
@@ -208,7 +248,7 @@ const App: React.FC = () => {
                 className={`relative animate-fluid-in`}
                 style={{ animationDelay: `${0.1 * (index + 1)}s` }}
               >
-                <PostCard post={post} onUpvote={handleUpvote} onDownvote={handleDownvote} currentUser={MOCK_USER} />
+                <PostCard post={post} onUpvote={handleUpvote} onDownvote={handleDownvote} currentUser={currentUser} onNavigateToProfile={handleNavigateToProfile} />
               </div>
             ))}
           </div>
@@ -248,31 +288,29 @@ const App: React.FC = () => {
               </button>
               
               <button 
-                onClick={() => changeFeed(FeedType.PROFILE)}
-                className={`p-0.5 rounded-2xl transition-all active:scale-90 ${activeFeed === FeedType.PROFILE ? 'ring-4 ring-indigo-500/30' : 'grayscale hover:grayscale-0'}`}
+                onClick={handleGoToMyProfile}
+                className={`p-0.5 rounded-2xl transition-all active:scale-90 ${activeFeed === FeedType.PROFILE && viewedUser.id === currentUser.id ? 'ring-4 ring-indigo-500/30' : 'grayscale hover:grayscale-0'}`}
               >
-                <img src={MOCK_USER.avatar} className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl object-cover border border-white/10 shadow-lg" />
+                <img src={currentUser.avatar} className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl object-cover border border-white/10 shadow-lg" />
               </button>
             </div>
           </div>
         </div>
       </nav>
 
-      {/* Story Section - Positioned At the Absolute Top on Mobile/Desktop for Discovery */}
       {activeFeed === FeedType.DISCOVERY && !isSyncing && (
         <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-4 sm:pt-6">
           <StoryBar 
             stories={stories} 
-            currentUser={MOCK_USER} 
+            currentUser={currentUser} 
             onAddStory={() => setIsCreateModalOpen(true)} 
-            onViewStory={(s) => setStories(prev => prev.map(item => item.id === s.id ? { ...item, isSeen: true } : item))} 
+            onViewStory={(s) => setStories(prev => prev.map(item => item.id === s.id ? { ...item, isSeen: true } : item))}
+            onNavigateToProfile={handleNavigateToProfile}
           />
         </div>
       )}
 
-      {/* Main Grid Content Area */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 sm:py-6 grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-12">
-        {/* Desktop Sidebar */}
         <aside className="hidden lg:block lg:col-span-3 sticky top-32 h-fit space-y-8">
             <div className="glass rounded-[2.5rem] p-8 space-y-4 shadow-xl">
               <h3 className="text-[10px] font-black text-app-muted uppercase tracking-[0.4em] px-4 mb-4">Signal Hub</h3>
@@ -292,16 +330,6 @@ const App: React.FC = () => {
                   </div>
                 </button>
               ))}
-
-              <div className="pt-8 mt-8 border-t border-white/5">
-                <button 
-                  onClick={handleInstallApp}
-                  className="w-full flex items-center justify-center space-x-3 px-6 py-4 rounded-2xl bg-white/5 border border-white/5 text-app-muted hover:text-white hover:bg-white/10 transition-all group"
-                >
-                  <Download size={18} className="group-hover:translate-y-1 transition-transform" />
-                  <span className="text-[10px] font-black uppercase tracking-widest">Download Platform</span>
-                </button>
-              </div>
             </div>
         </aside>
 
@@ -309,7 +337,6 @@ const App: React.FC = () => {
           {renderContent()}
         </main>
 
-        {/* Hot Signals - Desktop Only */}
         {activeFeed !== FeedType.MESSAGES && activeFeed !== FeedType.PROFILE && (
           <aside className="hidden lg:block lg:col-span-3 sticky top-32 h-fit">
             <div className="glass rounded-[2.5rem] p-10 border-white/5 shadow-xl relative overflow-hidden group hover-lift">
@@ -330,57 +357,33 @@ const App: React.FC = () => {
         )}
       </div>
 
-      {/* Full-Width Mobile Bottom Nav */}
       <nav className="lg:hidden glass fixed bottom-0 left-0 right-0 h-24 sm:h-28 rounded-t-[3rem] border-t border-white/10 shadow-3xl flex items-center justify-around px-2 z-[60] backdrop-blur-3xl">
-        <button 
-          onClick={() => changeFeed(FeedType.DISCOVERY)}
-          className={`p-3 sm:p-4 rounded-2xl transition-all btn-active ${activeFeed === FeedType.DISCOVERY ? 'text-app-accent scale-110' : 'text-app-muted'}`}
-        >
+        <button onClick={() => changeFeed(FeedType.DISCOVERY)} className={`p-3 sm:p-4 rounded-2xl transition-all btn-active ${activeFeed === FeedType.DISCOVERY ? 'text-app-accent scale-110' : 'text-app-muted'}`}>
           <Compass size={28} />
         </button>
-        <button 
-          onClick={() => changeFeed(FeedType.REELS)}
-          className={`p-3 sm:p-4 rounded-2xl transition-all btn-active ${activeFeed === FeedType.REELS ? 'text-app-accent scale-110' : 'text-app-muted'}`}
-        >
+        <button onClick={() => changeFeed(FeedType.REELS)} className={`p-3 sm:p-4 rounded-2xl transition-all btn-active ${activeFeed === FeedType.REELS ? 'text-app-accent scale-110' : 'text-app-muted'}`}>
           <Clapperboard size={28} />
         </button>
-        
         <div className="relative -mt-12 sm:-mt-16">
-          <button 
-            onClick={() => setIsCreateModalOpen(true)}
-            className="w-16 h-16 sm:w-20 sm:h-20 merit-gradient rounded-[1.8rem] sm:rounded-[2.2rem] flex items-center justify-center text-white shadow-[0_15px_30px_rgba(255,0,128,0.3)] border-4 border-app-bg active:scale-90 transition-all cursor-pointer hover:rotate-90 duration-700"
-          >
-             {/* Fixed: Replaced responsive size prop with Tailwind classes */}
+          <button onClick={() => setIsCreateModalOpen(true)} className="w-16 h-16 sm:w-20 sm:h-20 merit-gradient rounded-[1.8rem] sm:rounded-[2.2rem] flex items-center justify-center text-white shadow-xl border-4 border-app-bg active:scale-90 transition-all">
              <Plus strokeWidth={3} className="w-9 h-9 sm:w-11 sm:h-11" />
           </button>
         </div>
-
-        <button 
-          className="p-3 sm:p-4 rounded-2xl transition-all text-app-muted btn-active"
-        >
+        <button className="p-3 sm:p-4 rounded-2xl transition-all text-app-muted btn-active">
           <Search size={28} />
         </button>
-        
-        <button 
-          onClick={() => changeFeed(FeedType.MESSAGES)}
-          className={`p-3 sm:p-4 rounded-2xl transition-all btn-active ${activeFeed === FeedType.MESSAGES ? 'text-app-accent scale-110' : 'text-app-muted'}`}
-        >
+        <button onClick={() => changeFeed(FeedType.MESSAGES)} className={`p-3 sm:p-4 rounded-2xl transition-all btn-active ${activeFeed === FeedType.MESSAGES ? 'text-app-accent scale-110' : 'text-app-muted'}`}>
           <MessageCircle size={28} />
         </button>
       </nav>
 
-      <NotificationPanel 
-        isOpen={isNotificationsOpen} 
-        onClose={() => setIsNotificationsOpen(false)}
-        notifications={notifications}
-        onAction={() => {}} 
-      />
-
-      <CreateModal 
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-        currentUser={MOCK_USER}
-        onPostCreated={handlePostCreated}
+      <NotificationPanel isOpen={isNotificationsOpen} onClose={() => setIsNotificationsOpen(false)} notifications={notifications} onAction={() => {}} onNavigateToProfile={handleNavigateToProfile} />
+      <CreateModal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} currentUser={currentUser} onPostCreated={handlePostCreated} />
+      <IdentityModal 
+        isOpen={isIdentityModalOpen} 
+        onClose={() => setIsIdentityModalOpen(false)} 
+        currentUser={currentUser} 
+        onIdentityUpdate={handleIdentityUpdate} 
       />
     </div>
   );

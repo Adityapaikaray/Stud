@@ -17,6 +17,7 @@ import {
 
 interface ChatViewProps {
   currentUser: User;
+  onNavigateToProfile?: (user: User) => void;
 }
 
 const MOCK_CHATS: ChatRoom[] = [
@@ -42,7 +43,7 @@ const MOCK_CHATS: ChatRoom[] = [
   }
 ];
 
-const ChatView: React.FC<ChatViewProps> = ({ currentUser }) => {
+const ChatView: React.FC<ChatViewProps> = ({ currentUser, onNavigateToProfile }) => {
   const [selectedChatId, setSelectedChatId] = useState<string | null>(MOCK_CHATS[0].id);
   const [inputMessage, setInputMessage] = useState('');
   const [chats, setChats] = useState<ChatRoom[]>(MOCK_CHATS);
@@ -71,6 +72,12 @@ const ChatView: React.FC<ChatViewProps> = ({ currentUser }) => {
         : chat
     ));
     setInputMessage('');
+  };
+
+  const handleProfileClick = () => {
+    if (selectedChat && onNavigateToProfile) {
+      onNavigateToProfile(selectedChat.participant);
+    }
   };
 
   return (
@@ -128,14 +135,20 @@ const ChatView: React.FC<ChatViewProps> = ({ currentUser }) => {
                 <button onClick={() => setSelectedChatId(null)} className="md:hidden p-2 text-slate-400">
                   <ArrowLeft size={20} />
                 </button>
-                <div className="relative">
+                <div 
+                  onClick={handleProfileClick}
+                  className="relative cursor-pointer"
+                >
                   <img src={selectedChat.participant.avatar} className="w-10 h-10 rounded-xl object-cover border border-white/10" alt={selectedChat.participant.username} />
                   {selectedChat.isOnline && (
                     <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-[#0f172a]" />
                   )}
                 </div>
-                <div>
-                  <h3 className="text-sm font-black">@{selectedChat.participant.username}</h3>
+                <div 
+                  onClick={handleProfileClick}
+                  className="cursor-pointer"
+                >
+                  <h3 className="text-sm font-black hover:text-app-accent transition-colors">@{selectedChat.participant.username}</h3>
                   <div className="flex items-center space-x-2 text-[10px] text-indigo-400 font-bold uppercase tracking-widest">
                     <Circle size={8} fill="currentColor" className={selectedChat.isOnline ? 'text-emerald-500' : 'text-slate-600'} />
                     <span>{selectedChat.isOnline ? 'Synchronized' : 'Offline'}</span>

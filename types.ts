@@ -16,6 +16,7 @@ export interface Post {
   timestamp: Date;
   upvotes: number;
   downvotes: number;
+  views: number;
   aiBadge?: {
     label: string;
     color: string;
@@ -23,6 +24,7 @@ export interface Post {
   };
   comments: Comment[];
   isReel?: boolean;
+  song?: string;
 }
 
 export interface Reel extends Post {

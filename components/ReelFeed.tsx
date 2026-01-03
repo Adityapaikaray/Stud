@@ -17,14 +17,13 @@ interface ReelFeedProps {
   reels: Reel[];
   onUpvote: (id: string) => void;
   onDownvote: (id: string) => void;
+  onNavigateToProfile?: (user: User) => void;
 }
 
-const ReelFeed: React.FC<ReelFeedProps> = ({ reels, onUpvote, onDownvote }) => {
+const ReelFeed: React.FC<ReelFeedProps> = ({ reels, onUpvote, onDownvote, onNavigateToProfile }) => {
   const [activeReelIndex, setActiveReelIndex] = useState(0);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  // Simple "algorithm": Prioritize reels that share badges or merit levels close to liked user content
-  // Here we just sort them to ensure a fresh experience
   const suggestedReels = useMemo(() => {
     return [...reels].sort((a, b) => b.author.meritScore - a.author.meritScore);
   }, [reels]);
@@ -52,6 +51,7 @@ const ReelFeed: React.FC<ReelFeedProps> = ({ reels, onUpvote, onDownvote }) => {
             isActive={idx === activeReelIndex}
             onUpvote={onUpvote}
             onDownvote={onDownvote}
+            onNavigateToProfile={onNavigateToProfile}
           />
         ))
       ) : (
@@ -69,9 +69,10 @@ interface ReelItemProps {
   isActive: boolean;
   onUpvote: (id: string) => void;
   onDownvote: (id: string) => void;
+  onNavigateToProfile?: (user: User) => void;
 }
 
-const ReelItem: React.FC<ReelItemProps> = ({ reel, isActive, onUpvote, onDownvote }) => {
+const ReelItem: React.FC<ReelItemProps> = ({ reel, isActive, onUpvote, onDownvote, onNavigateToProfile }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [voted, setVoted] = useState<'up' | 'down' | null>(null);
 
@@ -83,6 +84,10 @@ const ReelItem: React.FC<ReelItemProps> = ({ reel, isActive, onUpvote, onDownvot
       if (videoRef.current) videoRef.current.currentTime = 0;
     }
   }, [isActive]);
+
+  const handleProfileClick = () => {
+    onNavigateToProfile?.(reel.author);
+  };
 
   return (
     <div className="relative h-full w-full snap-start flex flex-col group">
@@ -131,7 +136,10 @@ const ReelItem: React.FC<ReelItemProps> = ({ reel, isActive, onUpvote, onDownvot
           <Share2 size={26} />
         </button>
 
-        <div className="w-12 h-12 rounded-full border-2 border-white/20 overflow-hidden animate-spin-slow p-1">
+        <div 
+          onClick={handleProfileClick}
+          className="w-12 h-12 rounded-full border-2 border-white/20 overflow-hidden animate-spin-slow p-1 cursor-pointer"
+        >
           <img src={reel.author.avatar} className="w-full h-full rounded-full object-cover" />
         </div>
       </div>
@@ -139,13 +147,19 @@ const ReelItem: React.FC<ReelItemProps> = ({ reel, isActive, onUpvote, onDownvot
       {/* Bottom Content Area */}
       <div className="absolute bottom-6 left-6 right-16 pointer-events-auto z-20">
         <div className="flex items-center space-x-3 mb-4">
-          <div className="relative">
+          <div 
+            onClick={handleProfileClick}
+            className="relative cursor-pointer"
+          >
             <img src={reel.author.avatar} className="w-10 h-10 rounded-xl border border-white/20" />
             <div className="absolute -bottom-1 -right-1 bg-indigo-500 p-0.5 rounded-lg border-2 border-black">
               <Zap size={10} className="text-white" />
             </div>
           </div>
-          <div>
+          <div 
+            onClick={handleProfileClick}
+            className="cursor-pointer"
+          >
             <h3 className="text-white font-black text-sm">@{reel.author.username}</h3>
             <div className="flex items-center text-xs text-indigo-400 font-black uppercase tracking-widest">
               <Sparkles size={10} className="mr-1" />
@@ -163,7 +177,9 @@ const ReelItem: React.FC<ReelItemProps> = ({ reel, isActive, onUpvote, onDownvot
 
         <div className="flex items-center space-x-2 text-white/60">
           <Music size={14} className="animate-pulse" />
-          <span className="text-[10px] font-bold uppercase tracking-widest truncate">Lumina Original Audio • High Signal Frequency</span>
+          <span className="text-[10px] font-bold uppercase tracking-widest truncate">
+            {reel.song ? reel.song : 'Lumina Original Audio • High Signal Frequency'}
+          </span>
         </div>
       </div>
 
