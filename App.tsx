@@ -27,6 +27,7 @@ import ProfileView from './components/ProfileView';
 import ChatView from './components/ChatView';
 import StoryBar from './components/StoryBar';
 import IdentityModal from './components/IdentityModal';
+import DiscoveryView from './components/DiscoveryView';
 
 // Mock Data
 const MOCK_USER: User = {
@@ -289,6 +290,33 @@ const App: React.FC = () => {
     setIsCreateModalOpen(false);
   }, [changeFeed]);
 
+  const handleNotificationAction = useCallback((id: string, action: 'ACCEPT' | 'DECLINE' | 'READ') => {
+    setNotifications(prev => {
+      if (action === 'DECLINE') {
+        return prev.filter(n => n.id !== id);
+      }
+      return prev.map(n => {
+        if (n.id === id) {
+          if (action === 'ACCEPT') {
+            return { ...n, status: 'ACCEPTED', read: true };
+          }
+          if (action === 'READ') {
+            return { ...n, read: true };
+          }
+        }
+        return n;
+      });
+    });
+    
+    // If it was a follow request being accepted, we might want to update current user follower count
+    if (action === 'ACCEPT') {
+      const notif = notifications.find(n => n.id === id);
+      if (notif?.type === 'FOLLOW_REQUEST') {
+        setCurrentUser(prev => ({ ...prev, followersCount: (prev.followersCount || 0) + 1 }));
+      }
+    }
+  }, [notifications]);
+
   const handleUpvote = (id: string) => {
     setPosts(prev => prev.map(p => p.id === id ? { ...p, upvotes: p.upvotes + 1 } : p));
   };
@@ -325,6 +353,14 @@ const App: React.FC = () => {
         );
       case FeedType.MESSAGES:
         return <ChatView currentUser={currentUser} onNavigateToProfile={handleNavigateToProfile} />;
+      case FeedType.SEARCH:
+        return (
+          <DiscoveryView 
+            posts={posts} 
+            reels={reels} 
+            onNavigateToProfile={handleNavigateToProfile} 
+          />
+        );
       default:
         return (
           <div className="space-y-3 pb-40">
@@ -392,6 +428,7 @@ const App: React.FC = () => {
               <h3 className="text-[10px] font-black text-app-muted uppercase tracking-[0.4em] px-6 mb-6">Navigation</h3>
               {[
                 { type: FeedType.DISCOVERY, icon: Compass, label: 'Discover' },
+                { type: FeedType.SEARCH, icon: Search, label: 'Explore' },
                 { type: FeedType.REELS, icon: Clapperboard, label: 'Visuals' },
                 { type: FeedType.MESSAGES, icon: MessageCircle, label: 'Signals' },
                 { type: FeedType.PROFILE, icon: Orbit, label: 'Network', action: handleGoToMyProfile },
@@ -410,7 +447,7 @@ const App: React.FC = () => {
             </div>
         </aside>
 
-        <main className={`col-span-1 ${activeFeed === FeedType.MESSAGES ? 'lg:col-span-9' : 'lg:col-span-6'}`}>
+        <main className={`col-span-1 ${activeFeed === FeedType.MESSAGES ? 'lg:col-span-9' : (activeFeed === FeedType.SEARCH ? 'lg:col-span-9' : 'lg:col-span-6')}`}>
           {activeFeed === FeedType.DISCOVERY && !isSyncing && (
             <div className="space-y-0.5">
               <StoryBar 
@@ -431,7 +468,7 @@ const App: React.FC = () => {
           {renderContent()}
         </main>
 
-        {activeFeed === FeedType.DISCOVERY && (
+        {(activeFeed === FeedType.DISCOVERY || activeFeed === FeedType.PROFILE) && activeFeed !== FeedType.SEARCH && (
           <aside className="hidden lg:block lg:col-span-3 sticky top-20 h-fit space-y-8">
             <div className="glass rounded-[3rem] p-10 border-white/5 shadow-2xl overflow-hidden relative group">
               <div className="absolute top-0 right-0 w-32 h-32 merit-gradient opacity-10 blur-[100px] -mr-16 -mt-16" />
@@ -474,8 +511,8 @@ const App: React.FC = () => {
         <button onClick={() => changeFeed(FeedType.DISCOVERY)} className={`p-4 rounded-2xl transition-all ${activeFeed === FeedType.DISCOVERY ? 'text-app-accent bg-white/[0.05] scale-110' : 'text-app-muted'}`}>
           <Compass size={28} />
         </button>
-        <button onClick={() => changeFeed(FeedType.REELS)} className={`p-4 rounded-2xl transition-all ${activeFeed === FeedType.REELS ? 'text-app-accent bg-white/[0.05] scale-110' : 'text-app-muted'}`}>
-          <Clapperboard size={28} />
+        <button onClick={() => changeFeed(FeedType.SEARCH)} className={`p-4 rounded-2xl transition-all ${activeFeed === FeedType.SEARCH ? 'text-app-accent bg-white/[0.05] scale-110' : 'text-app-muted'}`}>
+          <Search size={28} />
         </button>
         <div className="relative -mt-12">
           <button onClick={() => setIsCreateModalOpen(true)} className="w-16 h-16 merit-gradient rounded-[1.8rem] flex items-center justify-center text-white shadow-2xl border-4 border-[#010101] active:scale-90 transition-all">
@@ -485,12 +522,18 @@ const App: React.FC = () => {
         <button onClick={() => changeFeed(FeedType.MESSAGES)} className={`p-4 rounded-2xl transition-all ${activeFeed === FeedType.MESSAGES ? 'text-app-accent bg-white/[0.05] scale-110' : 'text-app-muted'}`}>
           <MessageCircle size={28} />
         </button>
-        <button className="p-4 rounded-2xl transition-all text-app-muted">
-          <Search size={28} />
+        <button onClick={() => changeFeed(FeedType.REELS)} className={`p-4 rounded-2xl transition-all ${activeFeed === FeedType.REELS ? 'text-app-accent bg-white/[0.05] scale-110' : 'text-app-muted'}`}>
+          <Clapperboard size={28} />
         </button>
       </nav>
 
-      <NotificationPanel isOpen={isNotificationsOpen} onClose={() => setIsNotificationsOpen(false)} notifications={notifications} onAction={() => {}} onNavigateToProfile={handleNavigateToProfile} />
+      <NotificationPanel 
+        isOpen={isNotificationsOpen} 
+        onClose={() => setIsNotificationsOpen(false)} 
+        notifications={notifications} 
+        onAction={handleNotificationAction} 
+        onNavigateToProfile={handleNavigateToProfile} 
+      />
       <CreateModal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} currentUser={currentUser} onPostCreated={handlePostCreated} />
       <IdentityModal 
         isOpen={isIdentityModalOpen} 

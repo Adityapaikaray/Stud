@@ -73,7 +73,8 @@ export enum FeedType {
   NEW_MINDS = 'NEW_MINDS',
   REELS = 'REELS',
   PROFILE = 'PROFILE',
-  MESSAGES = 'MESSAGES'
+  MESSAGES = 'MESSAGES',
+  SEARCH = 'SEARCH'
 }
 
 export type NotificationType = 'UPVOTE' | 'COMMENT' | 'SHARE' | 'FOLLOW_REQUEST' | 'SYSTEM';
