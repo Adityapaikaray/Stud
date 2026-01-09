@@ -65,11 +65,37 @@
         }
 
         body.light-mode {
-            --app-bg: #f8fafc;
-            --app-text: #0f172a;
-            --app-text-muted: #64748b;
-            --glass-bg: rgba(255, 255, 255, 0.7);
-            --glass-border: rgba(0, 0, 0, 0.05);
+            --app-bg: #ffffff;
+            --app-text: #000000;
+            --app-text-muted: #1e293b; /* Darker Slate 800 for better visibility */
+            --glass-bg: rgba(255, 255, 255, 0.85);
+            --glass-border: rgba(0, 0, 0, 0.12);
+        }
+
+        /* High contrast overrides for Light Mode "Better Vision" */
+        body.light-mode .text-slate-400,
+        body.light-mode .text-app-muted {
+            color: #334155; /* Slate 700 */
+            font-weight: 500;
+        }
+        body.light-mode .text-slate-500 {
+            color: #1e293b; /* Slate 800 */
+            font-weight: 600;
+        }
+        body.light-mode .text-slate-600 {
+            color: #0f172a; /* Slate 900 */
+            font-weight: 600;
+        }
+        body.light-mode .placeholder-slate-700::placeholder,
+        body.light-mode .placeholder-slate-800::placeholder {
+            color: #475569;
+            opacity: 1;
+        }
+        body.light-mode .glass {
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+        }
+        body.light-mode .orb {
+            opacity: 0.08; /* Subtler background in light mode to not interfere with text */
         }
 
         * {

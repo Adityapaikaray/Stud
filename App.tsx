@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo, useCallback, Fragment, useRef } from 'react';
 import { 
   Compass, 
@@ -451,17 +450,17 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen pb-32 lg:pb-0 relative text-app-text">
+    <div className="min-h-screen pb-32 lg:pb-0 relative text-app-text font-medium">
       <div className="fixed top-8 right-6 z-[95] flex items-center space-x-3 lg:hidden">
         <button 
           onClick={toggleTheme}
-          className="p-3 rounded-2xl glass text-app-muted hover:text-white transition-all active:scale-90 shadow-2xl"
+          className="p-3 rounded-2xl glass text-app-muted hover:text-app-text transition-all active:scale-90 shadow-2xl"
         >
           {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
         </button>
         <button 
           onClick={() => setIsNotificationsOpen(true)}
-          className="p-3 rounded-2xl glass text-app-muted hover:text-white transition-all active:scale-90 shadow-2xl relative"
+          className="p-3 rounded-2xl glass text-app-muted hover:text-app-text transition-all active:scale-90 shadow-2xl relative"
         >
           <Bell size={18} />
           {unreadCount > 0 && (
@@ -486,7 +485,7 @@ const App: React.FC = () => {
                   <Sparkles size={28} />
                 </div>
                 <div>
-                  <h1 className="text-3xl font-black tracking-tighter leading-none">Stud</h1>
+                  <h1 className="text-3xl font-black tracking-tighter leading-none text-app-text">Stud</h1>
                   <p className="text-[10px] text-app-accent font-bold uppercase tracking-[0.4em] mt-1">Merit Node</p>
                 </div>
               </div>
@@ -504,10 +503,10 @@ const App: React.FC = () => {
                 <button 
                   key={item.label}
                   onClick={() => item.action ? item.action() : changeFeed(item.type)}
-                  className={`w-full flex items-center justify-between px-6 py-4 rounded-2xl transition-all group ${activeFeed === item.type && (item.type !== FeedType.PROFILE || viewedUser.id === currentUser.id) ? `merit-gradient text-white shadow-[0_10px_30px_rgba(255,0,128,0.2)]` : 'text-app-muted hover:bg-white/[0.03] hover:text-app-text'}`}
+                  className={`w-full flex items-center justify-between px-6 py-4 rounded-2xl transition-all group ${activeFeed === item.type && (item.type !== FeedType.PROFILE || viewedUser.id === currentUser.id) ? `merit-gradient text-white shadow-[0_10px_30px_rgba(255,0,128,0.2)]` : 'text-app-muted hover:bg-black/[0.03] hover:text-app-text dark:hover:bg-white/[0.03]'}`}
                 >
                   <div className="flex items-center space-x-5">
-                    <item.icon size={22} className={activeFeed === item.type && (item.type !== FeedType.PROFILE || viewedUser.id === currentUser.id) ? 'text-white' : 'text-indigo-400/50 group-hover:text-indigo-400 transition-colors'} />
+                    <item.icon size={22} className={activeFeed === item.type && (item.type !== FeedType.PROFILE || viewedUser.id === currentUser.id) ? 'text-white' : 'text-indigo-600/60 dark:text-indigo-400/50 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors'} />
                     <span className="font-black text-[12px] uppercase tracking-widest">{item.label}</span>
                   </div>
                 </button>
@@ -515,10 +514,10 @@ const App: React.FC = () => {
               
               <button 
                 onClick={handleLogout}
-                className="w-full flex items-center space-x-5 px-6 py-4 rounded-2xl text-app-muted hover:text-rose-500 hover:bg-rose-500/5 transition-all group"
+                className="w-full flex items-center space-x-5 px-6 py-4 rounded-2xl text-app-muted hover:text-rose-600 dark:hover:text-rose-500 hover:bg-rose-500/5 transition-all group"
               >
                 <div className="w-5 h-5 flex items-center justify-center">
-                  <div className="w-2 h-2 rounded-full bg-rose-500/50 group-hover:bg-rose-500 transition-colors" />
+                  <div className="w-2 h-2 rounded-full bg-rose-600/50 dark:bg-rose-500/50 group-hover:bg-rose-600 dark:group-hover:bg-rose-500 transition-colors" />
                 </div>
                 <span className="font-black text-[10px] uppercase tracking-[0.3em]">Log Out Node</span>
               </button>
@@ -550,31 +549,33 @@ const App: React.FC = () => {
           <aside className="hidden lg:block lg:col-span-3 sticky top-20 h-fit space-y-8">
             <div className="glass rounded-[3rem] p-10 border-white/5 shadow-2xl overflow-hidden relative group">
               <div className="absolute top-0 right-0 w-32 h-32 merit-gradient opacity-10 blur-[100px] -mr-16 -mt-16" />
-              <h3 className="font-black mb-10 flex items-center space-x-4 uppercase text-[10px] tracking-[0.4em]">
+              <h3 className="font-black mb-10 flex items-center space-x-4 uppercase text-[10px] tracking-[0.4em] text-app-text">
                 <Flame size={24} className="text-rose-500 animate-pulse" />
                 <span>Trending</span>
               </h3>
               <div className="space-y-8">
                 {['#NeuralArt', '#PrismUI', '#Meritocracy'].map((tag) => (
                   <div key={tag} className="flex items-center justify-between group/tag cursor-pointer">
-                    <p className="text-[12px] font-bold text-slate-400 group-hover/tag:text-white transition-colors">{tag}</p>
-                    <span className="text-[8px] font-black text-app-accent bg-white/[0.05] px-2 py-1 rounded-lg">LIVE</span>
+                    <p className="text-[12px] font-bold text-app-text/70 group-hover/tag:text-app-text transition-colors">{tag}</p>
+                    <span className="text-[8px] font-black text-app-accent bg-black/[0.05] dark:bg-white/[0.05] px-2 py-1 rounded-lg">LIVE</span>
                   </div>
                 ))}
               </div>
             </div>
 
             <div className="glass rounded-[3rem] p-10 shadow-2xl border-white/5 hover-lift">
-               <h3 className="font-black mb-8 flex items-center space-x-4 uppercase text-[10px] tracking-[0.4em]">
+               <h3 className="font-black mb-8 flex items-center space-x-4 uppercase text-[10px] tracking-[0.4em] text-app-text">
                 <Zap size={24} className="text-amber-500" />
                 <span>Leaderboard</span>
               </h3>
               <div className="space-y-6">
                  {[1, 2, 3].map(i => (
                    <div key={i} className="flex items-center space-x-4 group cursor-pointer">
-                      <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/5 flex items-center justify-center font-black text-xs group-hover:bg-indigo-500 group-hover:text-white transition-all">{i}</div>
+                      <div className="w-10 h-10 rounded-xl bg-black/5 dark:bg-white/5 border border-white/5 flex items-center justify-center font-black text-xs group-hover:bg-indigo-500 group-hover:text-white transition-all text-app-text">
+                        {i}
+                      </div>
                       <div className="flex-1">
-                        <p className="text-xs font-bold">@top_node_{i}</p>
+                        <p className="text-xs font-bold text-app-text">@top_node_{i}</p>
                         <p className="text-[9px] text-app-muted font-black uppercase tracking-widest">Score: {5000 - i*1000}</p>
                       </div>
                    </div>
@@ -586,10 +587,10 @@ const App: React.FC = () => {
       </div>
 
       <nav className="lg:hidden glass fixed bottom-0 left-0 right-0 h-24 rounded-t-[3.5rem] border-t border-white/10 shadow-[0_-20px_50px_rgba(0,0,0,0.5)] flex items-center justify-around px-4 z-[90] backdrop-blur-3xl">
-        <button onClick={() => changeFeed(FeedType.DISCOVERY)} className={`p-4 rounded-2xl transition-all ${activeFeed === FeedType.DISCOVERY ? 'text-app-accent bg-white/[0.05] scale-110' : 'text-app-muted'}`}>
+        <button onClick={() => changeFeed(FeedType.DISCOVERY)} className={`p-4 rounded-2xl transition-all ${activeFeed === FeedType.DISCOVERY ? 'text-app-accent bg-black/[0.05] dark:bg-white/[0.05] scale-110' : 'text-app-muted'}`}>
           <Compass size={28} />
         </button>
-        <button onClick={() => changeFeed(FeedType.SEARCH)} className={`p-4 rounded-2xl transition-all ${activeFeed === FeedType.SEARCH ? 'text-app-accent bg-white/[0.05] scale-110' : 'text-app-muted'}`}>
+        <button onClick={() => changeFeed(FeedType.SEARCH)} className={`p-4 rounded-2xl transition-all ${activeFeed === FeedType.SEARCH ? 'text-app-accent bg-black/[0.05] dark:bg-white/[0.05] scale-110' : 'text-app-muted'}`}>
           <Search size={28} />
         </button>
         <div className="relative -mt-12">
@@ -597,10 +598,10 @@ const App: React.FC = () => {
              <Plus strokeWidth={3} size={32} />
           </button>
         </div>
-        <button onClick={() => changeFeed(FeedType.MESSAGES)} className={`p-4 rounded-2xl transition-all ${activeFeed === FeedType.MESSAGES ? 'text-app-accent bg-white/[0.05] scale-110' : 'text-app-muted'}`}>
+        <button onClick={() => changeFeed(FeedType.MESSAGES)} className={`p-4 rounded-2xl transition-all ${activeFeed === FeedType.MESSAGES ? 'text-app-accent bg-black/[0.05] dark:bg-white/[0.05] scale-110' : 'text-app-muted'}`}>
           <MessageCircle size={28} />
         </button>
-        <button onClick={() => changeFeed(FeedType.REELS)} className={`p-4 rounded-2xl transition-all ${activeFeed === FeedType.REELS ? 'text-app-accent bg-white/[0.05] scale-110' : 'text-app-muted'}`}>
+        <button onClick={() => changeFeed(FeedType.REELS)} className={`p-4 rounded-2xl transition-all ${activeFeed === FeedType.REELS ? 'text-app-accent bg-black/[0.05] dark:bg-white/[0.05] scale-110' : 'text-app-muted'}`}>
           <Clapperboard size={28} />
         </button>
       </nav>
