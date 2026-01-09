@@ -10,7 +10,8 @@ import {
   Info,
   Clock,
   Sparkles,
-  BellOff
+  BellOff,
+  ShieldAlert
 } from 'lucide-react';
 import { Notification, User } from '../types';
 
@@ -38,7 +39,11 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
     return () => { document.body.style.overflow = 'unset'; };
   }, [isOpen]);
 
-  const renderIcon = (type: Notification['type']) => {
+  const renderIcon = (type: Notification['type'], content?: string) => {
+    if (type === 'SYSTEM' && content?.toLowerCase().includes('security')) {
+      return <ShieldAlert size={16} className="text-rose-500 animate-pulse" />;
+    }
+    
     switch (type) {
       case 'UPVOTE': return <ArrowBigUp size={16} className="text-indigo-400" fill="currentColor" />;
       case 'COMMENT': return <MessageSquare size={16} className="text-emerald-400" />;
@@ -105,7 +110,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
               <div 
                 key={notif.id}
                 onClick={() => onAction(notif.id, 'READ')}
-                className={`p-6 rounded-[1.8rem] border transition-all cursor-pointer group hover-lift animate-fluid-in`}
+                className={`p-6 rounded-[1.8rem] border transition-all cursor-pointer group hover-lift animate-fluid-in ${notif.type === 'SYSTEM' && notif.content?.includes('Security') ? 'border-rose-500/20 bg-rose-500/5' : 'border-white/5'}`}
                 style={{ animationDelay: `${idx * 0.05}s` }}
               >
                 <div className="flex items-start space-x-5">
@@ -120,12 +125,12 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
                         alt={notif.actor.username}
                       />
                     ) : (
-                      <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center">
-                        <Sparkles size={24} className="text-indigo-400" />
+                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${notif.content?.includes('Security') ? 'bg-rose-500/10' : 'bg-indigo-500/10'}`}>
+                        {notif.content?.includes('Security') ? <ShieldAlert size={24} className="text-rose-500" /> : <Sparkles size={24} className="text-indigo-400" />}
                       </div>
                     )}
                     <div className="absolute -bottom-1.5 -right-1.5 p-1.5 bg-[var(--app-bg)] rounded-xl border border-white/10 shadow-xl">
-                      {renderIcon(notif.type)}
+                      {renderIcon(notif.type, notif.content)}
                     </div>
                   </div>
                   
@@ -140,7 +145,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
                             @{notif.actor.username}
                           </span>
                         )}
-                        <span className="text-slate-400">
+                        <span className={`text-slate-400 ${notif.type === 'SYSTEM' && notif.content?.includes('Security') ? 'text-rose-300' : ''}`}>
                           {notif.type === 'UPVOTE' && 'boosted your signal'}
                           {notif.type === 'COMMENT' && 'shared a perspective'}
                           {notif.type === 'SHARE' && 'spread your insight'}
@@ -148,7 +153,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
                           {notif.type === 'SYSTEM' && notif.content}
                         </span>
                       </p>
-                      {!notif.read && <div className="w-2.5 h-2.5 rounded-full bg-indigo-500 shrink-0 ml-3 shadow-[0_0_10px_rgba(99,102,241,0.5)]" />}
+                      {!notif.read && <div className={`w-2.5 h-2.5 rounded-full shrink-0 ml-3 ${notif.type === 'SYSTEM' && notif.content?.includes('Security') ? 'bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.5)]' : 'bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]'}`} />}
                     </div>
                     
                     {notif.type === 'COMMENT' && notif.content && (

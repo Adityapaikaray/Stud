@@ -17,7 +17,8 @@ import {
   LayoutGrid,
   Download,
   Orbit,
-  Play
+  Play,
+  ShieldAlert
 } from 'lucide-react';
 import { Post, User, FeedType, Notification, Reel, Story } from './types';
 import PostCard from './components/PostCard';
@@ -29,6 +30,7 @@ import ChatView from './components/ChatView';
 import StoryBar from './components/StoryBar';
 import IdentityModal from './components/IdentityModal';
 import DiscoveryView from './components/DiscoveryView';
+import LoginView from './components/LoginView';
 
 // Mock Data
 const MOCK_USER: User = {
@@ -236,6 +238,7 @@ const ReelRibbon: React.FC<{ reels: Reel[], onReelClick: (reel: Reel) => void }>
 };
 
 const App: React.FC = () => {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentUser, setCurrentUser] = useState<User>(MOCK_USER);
   const [posts, setPosts] = useState<Post[]>(INITIAL_POSTS);
   const [reels, setReels] = useState<Reel[]>(INITIAL_REELS);
@@ -250,8 +253,66 @@ const App: React.FC = () => {
   const [viewedUser, setViewedUser] = useState<User>(MOCK_USER);
 
   useEffect(() => {
+    // Check for saved session
+    const savedUser = localStorage.getItem('stud_node_session');
+    if (savedUser) {
+      const user = JSON.parse(savedUser);
+      setCurrentUser(user);
+      setIsLoggedIn(true);
+      // Even on saved session load, we log the access location
+      logAccessLocation();
+    }
+  }, []);
+
+  useEffect(() => {
     document.body.classList.toggle('light-mode', theme === 'light');
   }, [theme]);
+
+  const logAccessLocation = useCallback(async () => {
+    let locationName = "Unknown Neural Node";
+    
+    try {
+      if (navigator.geolocation) {
+        const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000 });
+        });
+        
+        // In a real app, you'd use a reverse geocoding API. 
+        // For Stud's futurist theme, we'll "approximate" the location name based on generic regions.
+        const { latitude, longitude } = position.coords;
+        // Mocking a location name for the demo - in production, this would be a fetch to a geocoding service
+        const regions = ["Neo Tokyo", "Silicon Rift", "Cyber Zurich", "The Cloud Mesh", "Signal Valley", "Neural District"];
+        locationName = `${regions[Math.floor(Math.random() * regions.length)]} (Lat: ${latitude.toFixed(2)}, Lon: ${longitude.toFixed(2)})`;
+      }
+    } catch (e) {
+      console.warn("Location synchronization failed or was denied.");
+      locationName = "Secure Undisclosed Node";
+    }
+
+    const securityNotification: Notification = {
+      id: `security-${Date.now()}`,
+      type: 'SYSTEM',
+      content: `Security Beacon: Node synchronized from ${locationName}. If this wasn't you, terminate your session immediately.`,
+      timestamp: new Date(),
+      read: false
+    };
+
+    setNotifications(prev => [securityNotification, ...prev]);
+  }, []);
+
+  const handleLogin = (user: User, remember: boolean) => {
+    setCurrentUser(user);
+    setIsLoggedIn(true);
+    if (remember) {
+      localStorage.setItem('stud_node_session', JSON.stringify(user));
+    }
+    logAccessLocation();
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('stud_node_session');
+    setIsLoggedIn(false);
+  };
 
   const toggleTheme = useCallback(() => {
     setTheme(prev => prev === 'dark' ? 'light' : 'dark');
@@ -278,6 +339,9 @@ const App: React.FC = () => {
 
   const handleIdentityUpdate = (updatedUser: User) => {
     setCurrentUser(updatedUser);
+    if (localStorage.getItem('stud_node_session')) {
+       localStorage.setItem('stud_node_session', JSON.stringify(updatedUser));
+    }
     if (viewedUser.id === updatedUser.id) setViewedUser(updatedUser);
   };
 
@@ -309,7 +373,6 @@ const App: React.FC = () => {
       });
     });
     
-    // If it was a follow request being accepted, we might want to update current user follower count
     if (action === 'ACCEPT') {
       const notif = notifications.find(n => n.id === id);
       if (notif?.type === 'FOLLOW_REQUEST') {
@@ -326,6 +389,10 @@ const App: React.FC = () => {
   };
 
   const unreadCount = useMemo(() => notifications.filter(n => !n.read).length, [notifications]);
+
+  if (!isLoggedIn) {
+    return <LoginView onLogin={handleLogin} />;
+  }
 
   const renderContent = () => {
     if (isSyncing) {
@@ -445,6 +512,16 @@ const App: React.FC = () => {
                   </div>
                 </button>
               ))}
+              
+              <button 
+                onClick={handleLogout}
+                className="w-full flex items-center space-x-5 px-6 py-4 rounded-2xl text-app-muted hover:text-rose-500 hover:bg-rose-500/5 transition-all group"
+              >
+                <div className="w-5 h-5 flex items-center justify-center">
+                  <div className="w-2 h-2 rounded-full bg-rose-500/50 group-hover:bg-rose-500 transition-colors" />
+                </div>
+                <span className="font-black text-[10px] uppercase tracking-[0.3em]">Log Out Node</span>
+              </button>
             </div>
         </aside>
 
@@ -469,7 +546,6 @@ const App: React.FC = () => {
           {renderContent()}
         </main>
 
-        {/* Fixed: Removed redundant FeedType.SEARCH check that caused unintentional comparison error */}
         {(activeFeed === FeedType.DISCOVERY || activeFeed === FeedType.PROFILE) && (
           <aside className="hidden lg:block lg:col-span-3 sticky top-20 h-fit space-y-8">
             <div className="glass rounded-[3rem] p-10 border-white/5 shadow-2xl overflow-hidden relative group">

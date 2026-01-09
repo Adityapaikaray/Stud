@@ -2,6 +2,7 @@
   "name": "Copy of Stud",
   "description": "A merit-based social platform where content quality outshines follower counts. Lumina uses AI to identify and surface high-value insights, ensuring the best ideas win regardless of who shares them.",
   "requestFramePermissions": [
-    "camera"
+    "camera",
+    "geolocation"
   ]
 }

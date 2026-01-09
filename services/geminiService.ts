@@ -71,8 +71,11 @@ export const getPersonalizedStrategy = async (username: string, pastContent: str
 
 export const enhanceImageWithAI = async (base64Image: string, prompt: string) => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  const mimeType = base64Image.split(';')[0].split(':')[1];
-  const data = base64Image.split(',')[1];
+  
+  // Extract data and mimeType from base64 string
+  const mimeTypeMatch = base64Image.match(/^data:([^;]+);base64,/);
+  const mimeType = mimeTypeMatch ? mimeTypeMatch[1] : 'image/png';
+  const data = base64Image.replace(/^data:[^;]+;base64,/, '');
 
   try {
     const response = await ai.models.generateContent({
@@ -80,7 +83,7 @@ export const enhanceImageWithAI = async (base64Image: string, prompt: string) =>
       contents: {
         parts: [
           { inlineData: { data, mimeType } },
-          { text: `Edit this image based on the following instruction: ${prompt}. Return the edited image.` },
+          { text: `Precisely edit this image based on this instruction: ${prompt}. Maintain high visual quality. Return only the edited image.` },
         ],
       },
     });
