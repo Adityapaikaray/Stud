@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useCallback, Fragment, useRef } from 'react';
 import { 
   Compass, 
@@ -468,7 +469,8 @@ const App: React.FC = () => {
           {renderContent()}
         </main>
 
-        {(activeFeed === FeedType.DISCOVERY || activeFeed === FeedType.PROFILE) && activeFeed !== FeedType.SEARCH && (
+        {/* Fixed: Removed redundant FeedType.SEARCH check that caused unintentional comparison error */}
+        {(activeFeed === FeedType.DISCOVERY || activeFeed === FeedType.PROFILE) && (
           <aside className="hidden lg:block lg:col-span-3 sticky top-20 h-fit space-y-8">
             <div className="glass rounded-[3rem] p-10 border-white/5 shadow-2xl overflow-hidden relative group">
               <div className="absolute top-0 right-0 w-32 h-32 merit-gradient opacity-10 blur-[100px] -mr-16 -mt-16" />

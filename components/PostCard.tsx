@@ -21,8 +21,6 @@ import {
   Zap,
   Copy,
   Check,
-  Twitter,
-  ExternalLink,
   Play,
   X,
   Repeat
@@ -45,6 +43,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpvote, onDownvote, current
   const [isExpanded, setIsExpanded] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
+  const [showSavedFeedback, setShowSavedFeedback] = useState(false);
   const [isReposted, setIsReposted] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
@@ -140,6 +139,14 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpvote, onDownvote, current
       }
     } else {
       handleCopyLink();
+    }
+  };
+
+  const toggleSave = () => {
+    setIsSaved(!isSaved);
+    if (!isSaved) {
+      setShowSavedFeedback(true);
+      setTimeout(() => setShowSavedFeedback(false), 2000);
     }
   };
 
@@ -239,7 +246,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpvote, onDownvote, current
       )}
 
       <div className="p-8 sm:p-10 flex flex-col">
-        {/* Interaction Bar - Cleaned up to only show primary interactions */}
+        {/* Interaction Bar */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center space-x-6">
             <div className="flex items-center space-x-2">
@@ -278,6 +285,31 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpvote, onDownvote, current
               <Repeat className="w-6 h-6" />
               <span className="text-sm font-black">{isReposted ? 1 : 0}</span>
             </button>
+
+            <div className="flex items-center space-x-5 border-l border-white/5 pl-5">
+              <button 
+                onClick={handleNativeShare}
+                className="text-app-muted hover:text-indigo-400 transition-all active:scale-110 group/share relative"
+              >
+                <Share2 className="w-6 h-6" />
+                <span className="absolute -top-10 left-1/2 -translate-x-1/2 bg-black/80 backdrop-blur-md text-[8px] font-black uppercase tracking-widest px-2 py-1 rounded-lg opacity-0 group-hover/share:opacity-100 transition-opacity pointer-events-none border border-white/10 text-white">Broadcast</span>
+              </button>
+
+              <button 
+                onClick={toggleSave}
+                className={`transition-all active:scale-110 group/save relative ${isSaved ? 'text-app-accent drop-shadow-[0_0_8px_rgba(255,0,128,0.4)]' : 'text-app-muted hover:text-white'}`}
+              >
+                <Bookmark className="w-6 h-6" fill={isSaved ? 'currentColor' : 'none'} />
+                {showSavedFeedback && (
+                  <span className="absolute -top-10 left-1/2 -translate-x-1/2 bg-app-accent text-[8px] font-black uppercase tracking-widest px-2 py-1 rounded-lg animate-spring border border-white/10 text-white whitespace-nowrap">Saved to Archive</span>
+                )}
+                {!showSavedFeedback && (
+                  <span className="absolute -top-10 left-1/2 -translate-x-1/2 bg-black/80 backdrop-blur-md text-[8px] font-black uppercase tracking-widest px-2 py-1 rounded-lg opacity-0 group-hover/save:opacity-100 transition-opacity pointer-events-none border border-white/10 text-white whitespace-nowrap">
+                    {isSaved ? 'Archived' : 'Archive'}
+                  </span>
+                )}
+              </button>
+            </div>
           </div>
 
           <div className="flex items-center space-x-5">
@@ -290,24 +322,6 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpvote, onDownvote, current
               </button>
               {showMenu && (
                 <div className="absolute right-0 bottom-full mb-4 w-60 glass rounded-[2rem] border border-white/10 shadow-2xl z-50 overflow-hidden animate-spring p-2">
-                   {/* Share Option in Menu */}
-                   <button 
-                    onClick={handleNativeShare}
-                    className="w-full px-5 py-4 flex items-center space-x-3 text-[10px] font-black text-app-text hover:bg-white/10 rounded-2xl transition-all uppercase tracking-widest"
-                   >
-                     <Share2 size={16} className="text-indigo-400" />
-                     <span>Broadcast Signal</span>
-                   </button>
-
-                   {/* Save Option in Menu */}
-                   <button 
-                    onClick={() => { setIsSaved(!isSaved); setShowMenu(false); }}
-                    className={`w-full px-5 py-4 flex items-center space-x-3 text-[10px] font-black hover:bg-white/10 rounded-2xl transition-all uppercase tracking-widest ${isSaved ? 'text-app-accent' : 'text-app-text'}`}
-                   >
-                     <Bookmark size={16} className={isSaved ? 'fill-current' : ''} />
-                     <span>{isSaved ? 'Archive Detached' : 'Secure to Archive'}</span>
-                   </button>
-
                    {/* Copy link in menu */}
                    <button 
                     onClick={handleCopyLink}
@@ -388,7 +402,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpvote, onDownvote, current
                     onClick={() => { setAttachedSong(song); setShowMusicSuggestions(false); }}
                     className="w-full flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/5 hover:border-pink-500/30 hover:bg-pink-500/5 transition-all group/song"
                   >
-                    <div className="flex items-center space-x-3">
+                    <div className="flex items-center space-x-4">
                        <Play size={10} fill="currentColor" className="text-pink-400" />
                        <span className="text-xs font-bold text-slate-200">{song}</span>
                     </div>

@@ -15,7 +15,11 @@ import {
   Radio,
   Dna,
   Binary,
-  ArrowUpRight
+  ArrowUpRight,
+  Users,
+  Target,
+  UserPlus,
+  UserCheck
 } from 'lucide-react';
 import { Post, Reel, User } from '../types';
 
@@ -36,14 +40,42 @@ const INTEREST_CATEGORIES = [
   { name: "Global Mesh", icon: Globe },
 ];
 
+const SUGGESTED_NODES = [
+  { 
+    user: { id: 's1', username: 'neural_nomad', avatar: 'https://picsum.photos/seed/nomad/100/100', meritScore: 1840 }, 
+    mutuals: 12, 
+    match: 94,
+    reason: "Signal overlap in #NeuralArt"
+  },
+  { 
+    user: { id: 's2', username: 'prism_architect', avatar: 'https://picsum.photos/seed/prism/100/100', meritScore: 2100 }, 
+    mutuals: 8, 
+    match: 88,
+    reason: "Mutual sync with @innovator_alex"
+  },
+  { 
+    user: { id: 's3', username: 'bit_wanderer', avatar: 'https://picsum.photos/seed/bit/100/100', meritScore: 920 }, 
+    mutuals: 15, 
+    match: 82,
+    reason: "Frequent logic-mesh interaction"
+  },
+];
+
 const DiscoveryView: React.FC<DiscoveryViewProps> = ({ posts, reels, onNavigateToProfile }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>("All Signals");
+  const [followedNodes, setFollowedNodes] = useState<Set<string>>(new Set());
+
+  const toggleFollow = (id: string) => {
+    const next = new Set(followedNodes);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setFollowedNodes(next);
+  };
 
   // Mix and prioritize content based on simulated "interest"
   const discoveryContent = useMemo(() => {
     const all = [...posts, ...reels];
-    // Simple mock interest shuffle
     return all.sort((a, b) => {
       const aScore = a.upvotes + (a.isReel ? 500 : 0) + (a.aiBadge ? 1000 : 0);
       const bScore = b.upvotes + (b.isReel ? 500 : 0) + (b.aiBadge ? 1000 : 0);
@@ -259,6 +291,101 @@ const DiscoveryView: React.FC<DiscoveryViewProps> = ({ posts, reels, onNavigateT
                 <p className="text-sm mt-3 font-medium">No signals matching your current synchronization frequency.</p>
               </div>
             )}
+          </div>
+        </div>
+
+        {/* Neural Affinity Table - Follow Suggestions */}
+        <div className="mt-20 glass rounded-[3rem] p-8 border-white/5 shadow-2xl relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-indigo-500 to-transparent opacity-30" />
+          <div className="flex items-center justify-between mb-10 px-4">
+            <div className="flex items-center space-x-4">
+              <div className="p-3 bg-indigo-500/10 rounded-2xl border border-indigo-500/20">
+                <Users className="text-indigo-400" size={24} />
+              </div>
+              <div>
+                <h3 className="text-lg font-black tracking-tight">Neural Affinity Nodes</h3>
+                <p className="text-[10px] text-app-muted font-black uppercase tracking-[0.4em] mt-1">Simulated Follow Recommendations</p>
+              </div>
+            </div>
+            <div className="p-2 bg-white/5 rounded-xl text-slate-500">
+               <ArrowUpRight size={20} />
+            </div>
+          </div>
+
+          <div className="overflow-x-auto no-scrollbar">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="border-b border-white/5">
+                  <th className="pb-6 text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 px-4">Network Node</th>
+                  <th className="pb-6 text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 px-4 text-center">Affinity Level</th>
+                  <th className="pb-6 text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 px-4 text-center">Overlap Source</th>
+                  <th className="pb-6 text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 px-4 text-right">Synchronization</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5">
+                {SUGGESTED_NODES.map((node, i) => (
+                  <tr key={node.user.id} className="group hover:bg-white/[0.02] transition-colors">
+                    <td className="py-6 px-4">
+                      <div 
+                        className="flex items-center space-x-4 cursor-pointer"
+                        onClick={() => onNavigateToProfile(node.user as any)}
+                      >
+                        <div className="relative">
+                          <img src={node.user.avatar} className="w-12 h-12 rounded-2xl object-cover border border-white/10 group-hover:scale-105 transition-transform" />
+                          <div className="absolute -bottom-1 -right-1 p-1 bg-app-bg rounded-lg border border-white/10">
+                            <Zap size={10} className="text-amber-500" />
+                          </div>
+                        </div>
+                        <div>
+                          <p className="text-sm font-black text-white group-hover:text-indigo-400 transition-colors">@{node.user.username}</p>
+                          <p className="text-[10px] font-bold text-slate-500 mt-1 uppercase tracking-widest">Merit: {node.user.meritScore}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-6 px-4">
+                      <div className="flex flex-col items-center justify-center space-y-2">
+                        <div className="w-24 h-1.5 bg-white/5 rounded-full overflow-hidden">
+                          <div 
+                            className="h-full merit-gradient" 
+                            style={{ width: `${node.match}%`, transition: 'width 2s var(--fluid-ease)', transitionDelay: `${i * 0.2}s` }} 
+                          />
+                        </div>
+                        <span className="text-[10px] font-black text-indigo-400">{node.match}% Match</span>
+                      </div>
+                    </td>
+                    <td className="py-6 px-4 text-center">
+                      <div className="inline-flex items-center space-x-2 px-3 py-1.5 bg-white/5 rounded-xl border border-white/5">
+                        <Target size={12} className="text-slate-500" />
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{node.mutuals} Mutuals</span>
+                      </div>
+                      <p className="text-[8px] text-slate-600 mt-2 italic truncate max-w-[120px] mx-auto">{node.reason}</p>
+                    </td>
+                    <td className="py-6 px-4 text-right">
+                      <button 
+                        onClick={() => toggleFollow(node.user.id)}
+                        className={`inline-flex items-center space-x-2 px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                          followedNodes.has(node.user.id) 
+                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
+                            : 'bg-white/5 text-slate-300 border border-white/10 hover:border-indigo-500/50 hover:bg-indigo-500/10'
+                        }`}
+                      >
+                        {followedNodes.has(node.user.id) ? (
+                          <>
+                            <UserCheck size={14} />
+                            <span>Synced</span>
+                          </>
+                        ) : (
+                          <>
+                            <UserPlus size={14} />
+                            <span>Sync Node</span>
+                          </>
+                        )}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
